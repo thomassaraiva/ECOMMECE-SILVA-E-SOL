@@ -1,0 +1,6 @@
+{
+  "name": "SILVA E SOL - E-commerce Oficial",
+  "description": "Loja virtual oficial da marca Silva e Sol. Moda praia, casual e masculina com estética solar nordestina, leveza e alta qualidade.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
