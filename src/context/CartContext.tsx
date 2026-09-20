@@ -77,7 +77,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           selectedModel: m,
           quantity: Math.min(quantity, product.stockQuantity || 99),
           image: product.images[0] || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-          maxStock: product.stockQuantity || 99
+          maxStock: product.stockQuantity || 99,
+          weightGrams: product.weightGrams ?? 200,
+          heightCm: product.heightCm ?? 4,
+          widthCm: product.widthCm ?? 15,
+          lengthCm: product.lengthCm ?? 20
         };
         return [...prev, newItem];
       }

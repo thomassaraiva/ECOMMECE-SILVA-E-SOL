@@ -14,8 +14,8 @@ import {
 import { isSupabaseConfigured } from '../../lib/supabase';
 
 const SUPABASE_SCHEMA_SQL = `-- ==========================================================
--- SILVA E SOL &bull; SCHEMA COMPLETO SUPABASE POSTGRESQL
--- Inclui tabelas, chaves estrangeiras, RLS e Storage Buckets
+-- SILVA E SOL • SCHEMA COMPLETO SUPABASE POSTGRESQL (PRODUÇÃO)
+-- Inclui tabelas, chaves compatíveis (UUID/TEXT), RLS e Storage Buckets
 -- ==========================================================
 
 -- 1. Extensões
@@ -23,7 +23,7 @@ create extension if not exists "uuid-ossp";
 
 -- 2. Tabela de Categorias
 create table if not exists public.categories (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   name text not null,
   slug text unique not null,
   description text,
@@ -35,18 +35,20 @@ create table if not exists public.categories (
 
 -- 3. Tabela de Subcategorias
 create table if not exists public.subcategories (
-  id uuid primary key default uuid_generate_v4(),
-  category_id uuid references public.categories(id) on delete cascade not null,
+  id text primary key default uuid_generate_v4()::text,
+  category_id text references public.categories(id) on delete cascade not null,
   name text not null,
   slug text not null,
+  display_order integer default 1,
+  is_active boolean default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- 4. Tabela de Produtos
 create table if not exists public.products (
-  id uuid primary key default uuid_generate_v4(),
-  category_id uuid references public.categories(id) on delete restrict not null,
-  subcategory_id uuid references public.subcategories(id) on delete set null,
+  id text primary key default uuid_generate_v4()::text,
+  category_id text references public.categories(id) on delete set null,
+  subcategory_id text references public.subcategories(id) on delete set null,
   name text not null,
   slug text unique not null,
   sku text,
@@ -58,7 +60,7 @@ create table if not exists public.products (
   is_on_sale boolean default false,
   promotion_start_date date,
   promotion_end_date date,
-  stock_quantity integer default 0 not null,
+  stock_quantity integer default 10 not null,
   is_featured boolean default false,
   is_new boolean default false,
   is_active boolean default true,
@@ -70,14 +72,18 @@ create table if not exists public.products (
   size_chart jsonb,
   seo_title text,
   seo_description text,
+  weight_grams numeric(8,2) default 250,
+  height_cm numeric(8,2) default 4,
+  width_cm numeric(8,2) default 16,
+  length_cm numeric(8,2) default 22,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- 5. Tabela de Variações de Produto (SKU por grade)
 create table if not exists public.product_variants (
-  id uuid primary key default uuid_generate_v4(),
-  product_id uuid references public.products(id) on delete cascade not null,
+  id text primary key default uuid_generate_v4()::text,
+  product_id text references public.products(id) on delete cascade not null,
   size text,
   color text,
   model text,
@@ -90,36 +96,64 @@ create table if not exists public.product_variants (
 
 -- 6. Tabela de Banners da Home
 create table if not exists public.banners (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   title text not null,
   subtitle text,
   image_url text not null,
   mobile_image_url text,
-  link_url text not null,
+  link_url text not null default '/catalogo',
   button_text text default 'Ver Coleção',
   display_order integer default 1,
   is_active boolean default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 7. Tabela de Pedidos
-create table if not exists public.orders (
-  id uuid primary key default uuid_generate_v4(),
-  customer_name text not null,
-  customer_phone text not null,
-  customer_address text,
-  customer_city text,
-  customer_notes text,
-  total numeric(10,2) not null,
-  status text default 'pending_whatsapp' not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 7. Tabela de Perfis de Clientes
+create table if not exists public.customer_profiles (
+  id text primary key,
+  name text not null,
+  email text unique not null,
+  phone text,
+  cpf text,
+  address jsonb,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. Tabela de Itens de Pedido
+-- 8. Tabela de Pedidos
+create table if not exists public.orders (
+  id text primary key default uuid_generate_v4()::text,
+  order_number text unique not null,
+  customer_name text not null,
+  customer_email text,
+  customer_phone text not null,
+  customer_cpf text,
+  customer_city text,
+  customer_address text,
+  customer_notes text,
+  shipping_cost numeric(10,2) default 0,
+  shipping_carrier text,
+  payment_method text default 'whatsapp',
+  payment_status text default 'pending',
+  stone_transaction_id text,
+  subtotal numeric(10,2) not null,
+  discount numeric(10,2) default 0,
+  total numeric(10,2) not null,
+  status text default 'pending_whatsapp' not null,
+  items jsonb default '[]'::jsonb,
+  tracking_code text,
+  tracking_carrier text,
+  tracking_url text,
+  shipped_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 9. Tabela de Itens de Pedido
 create table if not exists public.order_items (
-  id uuid primary key default uuid_generate_v4(),
-  order_id uuid references public.orders(id) on delete cascade not null,
-  product_id uuid references public.products(id) on delete set null,
+  id text primary key default uuid_generate_v4()::text,
+  order_id text references public.orders(id) on delete cascade not null,
+  product_id text references public.products(id) on delete set null,
   product_name text not null,
   size text,
   color text,
@@ -129,23 +163,21 @@ create table if not exists public.order_items (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 9. Tabela de Configurações da Loja
+-- 10. Tabela de Configurações da Loja
 create table if not exists public.store_settings (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   store_name text not null default 'Silva e Sol',
   store_tagline text default 'Moda Masculina Praia & Solar',
   whatsapp_number text not null default '5581920019982',
   contact_email text default 'contato@silvaesol.com.br',
   instagram_handle text default '@silvaesol',
   free_shipping_threshold numeric(10,2) default 249.90,
-  exchange_policy text,
-  shipping_info text,
+  shipping_policy text,
+  return_policy text,
   privacy_policy text,
   about_title text,
   about_text text,
-  mission_text text,
-  manifesto_text text,
-  about_image_url text,
+  about_mission text,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -157,6 +189,7 @@ alter table public.subcategories enable row level security;
 alter table public.products enable row level security;
 alter table public.product_variants enable row level security;
 alter table public.banners enable row level security;
+alter table public.customer_profiles enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.store_settings enable row level security;
@@ -178,10 +211,12 @@ create policy "Admin total em banners" on public.banners for all using (auth.rol
 create policy "Admin total em pedidos" on public.orders for all using (auth.role() = 'authenticated');
 create policy "Admin total em itens de pedidos" on public.order_items for all using (auth.role() = 'authenticated');
 create policy "Admin total em configurações" on public.store_settings for all using (auth.role() = 'authenticated');
+create policy "Admin total em clientes" on public.customer_profiles for all using (auth.role() = 'authenticated');
 
--- Inserção de pedidos liberada para o checkout
+-- Inserção de pedidos e clientes liberada para o checkout
 create policy "Checkout cria pedidos" on public.orders for insert with check (true);
 create policy "Checkout cria itens" on public.order_items for insert with check (true);
+create policy "Clientes criam perfil" on public.customer_profiles for all using (true) with check (true);
 
 -- ==========================================================
 -- BUCKETS SUPABASE STORAGE (FOTOS E BANNERS)

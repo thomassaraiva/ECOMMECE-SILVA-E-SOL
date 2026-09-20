@@ -126,11 +126,11 @@ export const INITIAL_BANNERS: Banner[] = [
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: 'prod-sunga-slim-sol',
-    name: 'Sunga Slim Masculina Tradicional Silva e Sol',
-    slug: 'sunga-slim-masculina-tradicional-silva-e-sol',
+    name: 'Sunga Slim Masculina Lateral 9cm Silva e Sol',
+    slug: 'sunga-slim-masculina-lateral-9cm-silva-e-sol',
     sku: 'SES-SNG-001',
-    description: 'A clássica do litoral. Modelagem slim com lateral de 10cm, cordão interno ajustável com ponteira metálica e forro duplo integral.',
-    detailedDescription: 'Desenvolvida para valorizar a anatomia masculina com conforto extremo. Confeccionada com fio de poliamida com elastano de alta densidade e tecnologia antibacteriana. Não fica transparente nem acumula areia.',
+    description: 'A clássica do litoral brasileiro. Modelagem slim anatômica com lateral de 9cm, cordão interno ajustável com ponteira metálica e forro duplo integral anti-areia.',
+    detailedDescription: 'Desenvolvida especialmente para valorizar a anatomia masculina com liberdade de movimento e secagem rápida. A lateral de 9cm proporciona o bronzeado perfeito e caimento moderno. Confeccionada em poliamida com elastano de alta densidade e proteção UV50+ permanente.',
     price: 89.90,
     promotionalPrice: 69.90,
     isOnSale: true,
@@ -142,7 +142,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stockQuantity: 42,
     colors: ['Verde Musgo', 'Amarelo Ocre', 'Preto Ébano', 'Azul Mar'],
     sizes: ['P', 'M', 'G', 'GG'],
-    models: ['Slim (10cm)', 'Tradicional (13cm)'],
+    models: ['Slim Lateral 9cm', 'Tradicional 12cm'],
     images: [
       'https://images.unsplash.com/photo-1564557287817-3785e38ec1f5?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',

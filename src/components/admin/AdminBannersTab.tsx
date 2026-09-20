@@ -27,6 +27,7 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { Banner } from '../../types/ecommerce';
 import { formatBytes } from '../../lib/imageOptimizer';
+import { supabase } from '../../lib/supabase';
 
 export const AdminBannersTab: React.FC = () => {
   const { banners, categories, products, addBanner, updateBanner, deleteBanner, toggleBannerStatus } = useStore();
@@ -206,11 +207,49 @@ export const AdminBannersTab: React.FC = () => {
       mobileObjectPosition
     };
 
+    // Chamada direta para a tabela 'banners' do Supabase
+    let supabaseBannerId: string | undefined;
+    try {
+      const supabaseRow: Record<string, any> = {
+        title: payload.title,
+        subtitle: payload.subtitle || null,
+        image_url: payload.imageUrl,
+        mobile_image_url: payload.mobileImageUrl || null,
+        link_url: payload.ctaLink || payload.linkUrl,
+        button_text: payload.ctaText || payload.buttonText || 'Ver Coleção',
+        display_order: payload.order ?? 1,
+        is_active: payload.isActive
+      };
+
+      if (editingBanner) {
+        await supabase
+          .from('banners')
+          .update(supabaseRow)
+          .eq('id', editingBanner.id);
+      } else {
+        const { data: insertedData, error: insErr } = await supabase
+          .from('banners')
+          .insert([supabaseRow])
+          .select();
+
+        if (insErr) {
+          console.warn('Aviso ao inserir banner no Supabase:', insErr.message);
+        } else if (insertedData && insertedData[0]?.id) {
+          supabaseBannerId = String(insertedData[0].id);
+        }
+      }
+    } catch (sbErr) {
+      console.warn('Erro ao sincronizar banner no Supabase:', sbErr);
+    }
+
     if (editingBanner) {
       await updateBanner(editingBanner.id, payload);
       triggerSuccess('Banner atualizado com sucesso.');
     } else {
-      await addBanner(payload);
+      await addBanner({
+        ...payload,
+        ...(supabaseBannerId ? { id: supabaseBannerId } : {})
+      });
       triggerSuccess('Banner cadastrado com sucesso.');
     }
 

@@ -10,18 +10,18 @@ export interface SizeChartPreset {
 export const SIZE_CHART_PRESETS: SizeChartPreset[] = [
   {
     id: 'sungas',
-    name: 'Sungas (Slim, Boxer e Tradicional)',
+    name: 'Sungas (Slim Lateral 9cm, Boxer e Tradicional)',
     categoryMatch: ['cat-sungas', 'sungas'],
     chart: {
-      title: 'Tabela de Medidas Oficial - Sungas',
-      columns: ['Tamanho', 'Cintura (cm)', 'Quadril (cm)', 'Lateral (cm)'],
+      title: 'Tabela de Medidas Oficial - Sungas (Slim 9cm)',
+      columns: ['Tamanho', 'Cintura (cm)', 'Quadril (cm)', 'Lateral Slim (cm)'],
       rows: [
-        { size: 'P (38)', values: ['76 - 80 cm', '90 - 94 cm', '10 cm'] },
-        { size: 'M (40)', values: ['82 - 86 cm', '96 - 100 cm', '11 cm'] },
-        { size: 'G (42)', values: ['88 - 92 cm', '102 - 106 cm', '12 cm'] },
-        { size: 'GG (44-46)', values: ['94 - 98 cm', '108 - 114 cm', '13 cm'] },
+        { size: 'P (38)', values: ['76 - 80 cm', '90 - 94 cm', '9 cm'] },
+        { size: 'M (40)', values: ['82 - 86 cm', '96 - 100 cm', '9,5 cm'] },
+        { size: 'G (42)', values: ['88 - 92 cm', '102 - 106 cm', '10 cm'] },
+        { size: 'GG (44-46)', values: ['94 - 98 cm', '108 - 114 cm', '10,5 cm'] },
       ],
-      instructions: 'Passe a fita métrica em torno da cintura na altura habitual da sunga e no ponto mais largo do quadril. Nossas sungas possuem cordão interno ajustável para ajuste firme e anatômico.'
+      instructions: 'Passe a fita métrica em torno da cintura na altura habitual da sunga e no ponto mais largo do quadril. Nossa modelagem Slim possui lateral de 9cm para excelente caimento solar, liberdade de movimento e forro duplo com cordão interno ajustável.'
     }
   },
   {

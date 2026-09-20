@@ -59,6 +59,7 @@ interface StoreContextType {
   toggleBannerStatus: (id: string) => Promise<void>;
 
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
+  updateOrderTracking: (orderId: string, trackingData: { trackingCode: string; carrier?: string; trackingUrl?: string }) => Promise<void>;
   updateSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
   resetToDefaultData: () => void;
   revalidateData: () => Promise<void>;
@@ -199,25 +200,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setFilters(defaultFilters);
   };
 
-  // Funções Administrativas de Produto
-  const addProduct = async (prodData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newId = `prod-${Date.now()}`;
-    const now = new Date().toISOString();
-    const newProd: Product = {
-      ...prodData,
-      id: newId,
-      createdAt: now,
-      updatedAt: now
-    };
+  // Funções Administrativas de Produto com persistência permanente no Supabase
+  const addProduct = async (prodData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => {
+    const created = await StoreService.insertProduct(prodData);
 
     updateStateAndPersist(prev => ({
       ...prev,
-      products: [newProd, ...prev.products]
+      products: [created, ...prev.products.filter(p => p.id !== created.id)]
     }));
   };
 
   const updateProduct = async (id: string, updates: Partial<Product>) => {
     const now = new Date().toISOString();
+    await StoreService.updateProduct(id, updates);
+
     updateStateAndPersist(prev => ({
       ...prev,
       products: prev.products.map(p => (p.id === id ? { ...p, ...updates, updatedAt: now } : p))
@@ -228,6 +224,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteProduct = async (id: string) => {
+    await StoreService.deleteProduct(id);
+
     updateStateAndPersist(prev => ({
       ...prev,
       products: prev.products.filter(p => p.id !== id)
@@ -290,10 +288,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
   };
 
-  // Funções Administrativas de Categoria
+  // Funções Administrativas de Categoria com persistência permanente no Supabase
   const addCategory = async (catData: Omit<Category, 'id'>) => {
-    const newId = `cat-${Date.now()}`;
-    const newCat: Category = { ...catData, id: newId };
+    const newCat = await StoreService.insertCategory(catData);
     updateStateAndPersist(prev => ({
       ...prev,
       categories: [...prev.categories, newCat]
@@ -301,6 +298,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateCategory = async (id: string, updates: Partial<Category>) => {
+    await StoreService.updateCategory(id, updates);
     updateStateAndPersist(prev => ({
       ...prev,
       categories: prev.categories.map(c => (c.id === id ? { ...c, ...updates } : c))
@@ -308,6 +306,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteCategory = async (id: string) => {
+    await StoreService.deleteCategory(id);
     updateStateAndPersist(prev => ({
       ...prev,
       categories: prev.categories.filter(c => c.id !== id),
@@ -316,16 +315,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const toggleCategoryStatus = async (id: string) => {
+    const target = storeState.categories.find(c => c.id === id);
+    const newStatus = target ? !target.isActive : false;
+    await StoreService.updateCategory(id, { isActive: newStatus });
     updateStateAndPersist(prev => ({
       ...prev,
-      categories: prev.categories.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c)
+      categories: prev.categories.map(c => c.id === id ? { ...c, isActive: newStatus } : c)
     }));
   };
 
-  // Subcategorias
+  // Subcategorias com persistência permanente no Supabase
   const addSubcategory = async (subData: Omit<Subcategory, 'id'>) => {
-    const newId = `sub-${Date.now()}`;
-    const newSub: Subcategory = { ...subData, id: newId };
+    const newSub = await StoreService.insertSubcategory(subData);
     updateStateAndPersist(prev => ({
       ...prev,
       subcategories: [...prev.subcategories, newSub]
@@ -333,6 +334,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateSubcategory = async (id: string, updates: Partial<Subcategory>) => {
+    await StoreService.updateSubcategory(id, updates);
     updateStateAndPersist(prev => ({
       ...prev,
       subcategories: prev.subcategories.map(s => (s.id === id ? { ...s, ...updates } : s))
@@ -340,16 +342,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteSubcategory = async (id: string) => {
+    await StoreService.deleteSubcategory(id);
     updateStateAndPersist(prev => ({
       ...prev,
       subcategories: prev.subcategories.filter(s => s.id !== id)
     }));
   };
 
-  // Banners
+  // Banners com persistência permanente no Supabase
   const addBanner = async (bannerData: Omit<Banner, 'id'>) => {
-    const newId = `banner-${Date.now()}`;
-    const newBanner: Banner = { ...bannerData, id: newId };
+    const newBanner = await StoreService.insertBanner(bannerData);
     updateStateAndPersist(prev => ({
       ...prev,
       banners: [...prev.banners, newBanner]
@@ -357,6 +359,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateBanner = async (id: string, updates: Partial<Banner>) => {
+    await StoreService.updateBanner(id, updates);
     updateStateAndPersist(prev => ({
       ...prev,
       banners: prev.banners.map(b => (b.id === id ? { ...b, ...updates } : b))
@@ -364,6 +367,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteBanner = async (id: string) => {
+    await StoreService.deleteBanner(id);
     updateStateAndPersist(prev => ({
       ...prev,
       banners: prev.banners.filter(b => b.id !== id)
@@ -371,22 +375,54 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const toggleBannerStatus = async (id: string) => {
+    const target = storeState.banners.find(b => b.id === id);
+    const newStatus = target ? !target.isActive : false;
+    await StoreService.updateBanner(id, { isActive: newStatus });
     updateStateAndPersist(prev => ({
       ...prev,
-      banners: prev.banners.map(b => b.id === id ? { ...b, isActive: !b.isActive } : b)
+      banners: prev.banners.map(b => b.id === id ? { ...b, isActive: newStatus } : b)
     }));
   };
 
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
     const now = new Date().toISOString();
+    await StoreService.updateOrder(orderId, { status });
     updateStateAndPersist(prev => ({
       ...prev,
       orders: prev.orders.map(o => o.id === orderId ? { ...o, status, updatedAt: now } : o)
     }));
   };
 
-  // Configurações da Loja
+  const updateOrderTracking = async (orderId: string, trackingData: { trackingCode: string; carrier?: string; trackingUrl?: string }) => {
+    const now = new Date().toISOString();
+    const trackingCarrier = trackingData.carrier || 'Melhor Envio / Correios';
+    const trackingUrl = trackingData.trackingUrl || `https://melhorrastreio.com.br/rastreio/${trackingData.trackingCode}`;
+
+    await StoreService.updateOrder(orderId, {
+      status: 'shipped',
+      trackingCode: trackingData.trackingCode,
+      trackingCarrier,
+      trackingUrl,
+      shippedAt: now
+    });
+
+    updateStateAndPersist(prev => ({
+      ...prev,
+      orders: prev.orders.map(o => o.id === orderId ? { 
+        ...o, 
+        status: 'shipped',
+        trackingCode: trackingData.trackingCode,
+        trackingCarrier,
+        trackingUrl,
+        shippedAt: now,
+        updatedAt: now 
+      } : o)
+    }));
+  };
+
+  // Configurações da Loja com persistência permanente no Supabase
   const updateSettings = async (newSettings: Partial<StoreSettings>) => {
+    await StoreService.updateSettings(newSettings);
     updateStateAndPersist(prev => {
       const merged = { ...prev.settings, ...newSettings };
       initializeAnalytics({
@@ -520,6 +556,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         deleteBanner,
         toggleBannerStatus,
         updateOrderStatus,
+        updateOrderTracking,
         updateSettings,
         resetToDefaultData,
         revalidateData

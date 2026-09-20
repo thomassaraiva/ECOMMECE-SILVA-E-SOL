@@ -79,8 +79,45 @@ export interface Product {
   promotionEndDate?: string;
   discountPercent?: number;
   variants?: ProductVariant[];
+
+  // Campos de Logística & Embalagem (Melhor Envio / Correios / Transportadoras)
+  weightGrams?: number;   // Peso em gramas (ex: 250)
+  heightCm?: number;      // Altura da embalagem em cm (ex: 5)
+  widthCm?: number;       // Largura da embalagem em cm (ex: 16)
+  lengthCm?: number;      // Comprimento da embalagem em cm (ex: 22)
+
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ShippingOption {
+  id: string;
+  name: string;
+  carrier: 'Correios (PAC)' | 'Correios (SEDEX)' | 'Melhor Envio (Jadlog)' | 'Loggi Express';
+  serviceCode?: string;
+  price: number;
+  deliveryDays: number;
+  estimatedDays?: number;
+  isFree?: boolean;
+}
+
+export interface CustomerAddress {
+  cep: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+}
+
+export interface CustomerProfile {
+  id?: string;
+  name: string;
+  email: string;
+  cpf?: string;
+  phone?: string;
+  address?: CustomerAddress;
 }
 
 export interface Banner {
@@ -146,6 +183,10 @@ export interface CartItem {
   image: string;
   imageUrl?: string;
   maxStock: number;
+  weightGrams?: number;
+  heightCm?: number;
+  widthCm?: number;
+  lengthCm?: number;
 }
 
 export interface OrderItem {
@@ -166,14 +207,30 @@ export interface Order {
   id: string;
   orderNumber?: string;
   customerName: string;
+  customerEmail?: string;
   customerPhone: string;
+  customerCpf?: string;
   customerAddress?: string;
   customerCity?: string;
+  shippingAddress?: CustomerAddress;
+  shippingOption?: ShippingOption;
+  shippingCost?: number;
+  paymentMethod?: 'stone_pix' | 'stone_credit_card' | 'whatsapp';
+  paymentStatus?: 'pending' | 'approved' | 'failed';
+  isSimulation?: boolean;
+  stoneTransactionId?: string;
+  installments?: number;
   customerNotes?: string;
   subtotal?: number;
   discount?: number;
   total: number;
   status: OrderStatus;
+  trackingCode?: string;
+  trackingUrl?: string;
+  trackingCarrier?: string;
+  shippedAt?: string;
+  melhorEnvioOrderId?: string;
+  melhorEnvioProtocol?: string;
   items: OrderItem[];
   createdAt: string;
 }

@@ -1,11 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Sun, ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { supabase } from '../../lib/supabase';
+import { Banner } from '../../types/ecommerce';
 
 export const HeroBanner: React.FC = () => {
-  const { banners, navigateToCategory, setCurrentPage } = useStore();
-  const activeBanners = banners.filter(b => b.isActive);
+  const { banners: storeBanners, navigateToCategory, setCurrentPage } = useStore();
+  const [supabaseBanners, setSupabaseBanners] = useState<Banner[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Busca direta na tabela 'banners' do Supabase
+  useEffect(() => {
+    async function fetchBannersFromSupabase() {
+      try {
+        const { data, error } = await supabase
+          .from('banners')
+          .select('*')
+          .order('display_order', { ascending: true });
+
+        if (error) {
+          console.warn('Aviso ao consultar tabela banners no Supabase:', error.message);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const mapped: Banner[] = data.map((b: any) => ({
+            id: String(b.id),
+            title: b.title || 'Coleção Solar',
+            subtitle: b.subtitle || '',
+            ctaText: b.button_text || b.cta_text || b.ctaText || 'Conhecer Coleção',
+            ctaLink: b.link_url || b.cta_link || b.ctaLink || 'sungas',
+            imageUrl: b.image_url || b.imageUrl || '',
+            mobileImageUrl: b.mobile_image_url || b.mobileImageUrl,
+            displayOrder: Number(b.display_order ?? b.displayOrder ?? 1),
+            isActive: b.is_active !== undefined ? Boolean(b.is_active) : (b.isActive !== undefined ? Boolean(b.isActive) : true),
+            objectPosition: b.object_position || b.objectPosition || 'center center',
+            mobileObjectPosition: b.mobile_object_position || b.mobileObjectPosition || 'center center'
+          }));
+          setSupabaseBanners(mapped);
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar banners do Supabase:', err);
+      }
+    }
+
+    fetchBannersFromSupabase();
+  }, []);
+
+  const banners = supabaseBanners.length > 0 ? supabaseBanners : storeBanners;
+  const activeBanners = banners.filter(b => b.isActive);
+
 
   useEffect(() => {
     if (activeBanners.length <= 1) return;

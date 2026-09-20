@@ -26,13 +26,16 @@ import {
   Loader2,
   Maximize2,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Truck,
+  Box,
+  Scale
 } from 'lucide-react';
 import { Product, Category, Subcategory, SizeChart, SizeChartRow, ProductVariant } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
 import { getDefaultSizeChartForCategory, SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
 import { optimizeProductVariantImage, formatBytes } from '../../lib/imageOptimizer';
-
+import { supabase } from '../../lib/supabase';
 
 interface AdminProductModalProps {
   isOpen: boolean;
@@ -40,7 +43,7 @@ interface AdminProductModalProps {
   productToEdit: Product | null;
 }
 
-type ModalTab = 'general' | 'media' | 'variants' | 'sizechart' | 'seo';
+type ModalTab = 'general' | 'media' | 'variants' | 'logistics' | 'sizechart' | 'seo';
 
 export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   isOpen,
@@ -108,6 +111,12 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     { size: 'GG', values: ['94 - 98 cm', '108 - 114 cm', '13 cm'] }
   ]);
 
+  // Aba Logística & Embalagem (Melhor Envio & Correios)
+  const [weightGrams, setWeightGrams] = useState<number>(200);
+  const [heightCm, setHeightCm] = useState<number>(4);
+  const [widthCm, setWidthCm] = useState<number>(15);
+  const [lengthCm, setLengthCm] = useState<number>(20);
+
   // Aba 5: SEO
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
@@ -145,6 +154,10 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setVariants(productToEdit.variants || []);
       setSeoTitle(productToEdit.seoTitle || productToEdit.name);
       setSeoDescription(productToEdit.seoDescription || productToEdit.description);
+      setWeightGrams(productToEdit.weightGrams ?? 200);
+      setHeightCm(productToEdit.heightCm ?? 4);
+      setWidthCm(productToEdit.widthCm ?? 15);
+      setLengthCm(productToEdit.lengthCm ?? 20);
 
       if (productToEdit.sizeChart) {
         setHasSizeChart(true);
@@ -452,13 +465,81 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         variants: variants.length > 0 ? variants : undefined,
         sizeChart: sizeChartData,
         seoTitle: seoTitle.trim() || name.trim(),
-        seoDescription: seoDescription.trim() || description.trim()
+        seoDescription: seoDescription.trim() || description.trim(),
+        weightGrams: Number(weightGrams) || 200,
+        heightCm: Number(heightCm) || 4,
+        widthCm: Number(widthCm) || 15,
+        lengthCm: Number(lengthCm) || 20
       };
+
+      // Inserção direta na tabela 'products' do Supabase via .insert()
+      let supabaseCreatedId: string | undefined;
+      try {
+        const supabaseRow: Record<string, any> = {
+          name: productPayload.name,
+          slug: productPayload.slug,
+          description: productPayload.description,
+          price: productPayload.price,
+          stock_quantity: productPayload.stockQuantity,
+          category_id: productPayload.categoryId,
+          is_active: productPayload.isActive,
+          is_featured: productPayload.isFeatured,
+          is_new: productPayload.isNew,
+          is_on_sale: productPayload.isOnSale,
+          images: productPayload.images,
+          sizes: productPayload.sizes,
+          colors: productPayload.colors,
+          models: productPayload.models,
+          sku: productPayload.sku || null,
+          brand: productPayload.brand,
+          detailed_description: productPayload.detailedDescription || null,
+          promotional_price: productPayload.promotionalPrice || null,
+          subcategory_id: productPayload.subcategoryId || null,
+          video_url: productPayload.videoUrl || null,
+          size_chart: productPayload.sizeChart || null,
+          variants: productPayload.variants || null,
+          seo_title: productPayload.seoTitle || null,
+          seo_description: productPayload.seoDescription || null,
+          weight_grams: productPayload.weightGrams,
+          height_cm: productPayload.heightCm,
+          width_cm: productPayload.widthCm,
+          length_cm: productPayload.lengthCm,
+          updated_at: new Date().toISOString()
+        };
+
+        if (productToEdit) {
+          const { error: sbUpdateErr } = await supabase
+            .from('products')
+            .update(supabaseRow)
+            .eq('id', productToEdit.id);
+
+          if (sbUpdateErr) {
+            console.warn('Aviso ao atualizar no Supabase:', sbUpdateErr.message);
+          }
+        } else {
+          // Chamada .insert() na tabela products do Supabase
+          const { data: sbInsertData, error: sbInsertErr } = await supabase
+            .from('products')
+            .insert([supabaseRow])
+            .select();
+
+          if (sbInsertErr) {
+            console.warn('Aviso ao inserir no Supabase:', sbInsertErr.message);
+          } else if (sbInsertData && sbInsertData[0]?.id) {
+            supabaseCreatedId = String(sbInsertData[0].id);
+          }
+        }
+      } catch (sbErr) {
+        console.warn('Erro ao comunicar com Supabase:', sbErr);
+      }
 
       if (productToEdit) {
         await updateProduct(productToEdit.id, productPayload);
       } else {
-        await addProduct(productPayload);
+        await addProduct({
+          ...productPayload,
+          ...(supabaseCreatedId ? { id: supabaseCreatedId } : {})
+        });
       }
 
       onClose();
@@ -528,6 +609,18 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('logistics')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'logistics'
+                ? 'border-[#2A8882] text-[#2A8882]'
+                : 'border-transparent text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <Truck className="w-3.5 h-3.5" />
+            <span>4. Logística & Embalagem</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('sizechart')}
             className={`py-3 px-4 text-xs font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'sizechart'
@@ -535,7 +628,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                 : 'border-transparent text-stone-400 hover:text-stone-200'
             }`}
           >
-            4. Tabela de Medidas
+            5. Tabela de Medidas
           </button>
           <button
             type="button"
@@ -546,7 +639,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                 : 'border-transparent text-stone-400 hover:text-stone-200'
             }`}
           >
-            5. SEO Google
+            6. SEO Google
           </button>
         </div>
 
@@ -1595,8 +1688,190 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
             </div>
           )}
 
+          {/* ABA 4: LOGÍSTICA & EMBALAGEM (MELHOR ENVIO & CORREIOS) */}
+          {activeTab === 'logistics' && (
+            <div className="space-y-6">
+              <div className="p-5 rounded-2xl bg-stone-950 border border-stone-800 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#2A8882]/10 border border-[#2A8882]/30 flex items-center justify-center text-[#2A8882]">
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">
+                      Dimensões & Peso para Cálculo de Frete
+                    </h3>
+                    <p className="text-xs text-stone-400">
+                      Integração com a API do Melhor Envio, Correios (PAC e SEDEX), Jadlog e transportadoras.
+                    </p>
+                  </div>
+                </div>
 
-          {/* ABA 4: TABELA DE MEDIDAS */}
+                <div className="p-3 bg-stone-900/60 rounded-xl border border-stone-800/80 text-xs text-stone-300 flex items-center gap-2">
+                  <Box className="w-4 h-4 text-[#F4803E] shrink-0" />
+                  <span>
+                    Estes valores são enviados automaticamente no cálculo do carrinho livre para orçar o frete real exato por CEP.
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid de Medidas da Embalagem */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Peso */}
+                <div className="p-4 rounded-2xl bg-stone-950 border border-stone-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-stone-200 flex items-center gap-1.5">
+                      <Scale className="w-3.5 h-3.5 text-[#2A8882]" />
+                      <span>Peso da Embalagem</span>
+                    </label>
+                    <span className="text-[11px] font-mono text-[#F4803E]">
+                      {(weightGrams / 1000).toFixed(2)} kg
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="10"
+                      step="10"
+                      required
+                      value={weightGrams}
+                      onChange={(e) => setWeightGrams(Math.max(10, parseInt(e.target.value) || 10))}
+                      placeholder="Ex: 200"
+                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white font-mono text-sm focus:outline-none focus:border-[#2A8882]"
+                    />
+                    <span className="absolute right-3 top-2 text-xs text-stone-500 font-semibold">
+                      gramas (g)
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {[
+                      { label: 'Sunga (150g)', val: 150 },
+                      { label: 'Bermuda (250g)', val: 250 },
+                      { label: 'Camiseta (300g)', val: 300 },
+                      { label: 'Kit (500g)', val: 500 }
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setWeightGrams(preset.val)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md transition-colors ${
+                          weightGrams === preset.val 
+                            ? 'bg-[#2A8882] text-white font-bold' 
+                            : 'bg-stone-900 text-stone-400 hover:text-white border border-stone-800'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Altura */}
+                <div className="p-4 rounded-2xl bg-stone-950 border border-stone-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-stone-200">
+                      Altura da Embalagem
+                    </label>
+                    <span className="text-[11px] text-stone-500">Mín. 2 cm</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="2"
+                      max="105"
+                      required
+                      value={heightCm}
+                      onChange={(e) => setHeightCm(Math.max(2, parseInt(e.target.value) || 2))}
+                      placeholder="Ex: 4"
+                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white font-mono text-sm focus:outline-none focus:border-[#2A8882]"
+                    />
+                    <span className="absolute right-3 top-2 text-xs text-stone-500 font-semibold">
+                      cm
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-stone-500">
+                    Espessura do pacote ou envelope plástico/kraft.
+                  </p>
+                </div>
+
+                {/* Largura */}
+                <div className="p-4 rounded-2xl bg-stone-950 border border-stone-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-stone-200">
+                      Largura da Embalagem
+                    </label>
+                    <span className="text-[11px] text-stone-500">Mín. 11 cm</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="11"
+                      max="105"
+                      required
+                      value={widthCm}
+                      onChange={(e) => setWidthCm(Math.max(11, parseInt(e.target.value) || 11))}
+                      placeholder="Ex: 15"
+                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white font-mono text-sm focus:outline-none focus:border-[#2A8882]"
+                    />
+                    <span className="absolute right-3 top-2 text-xs text-stone-500 font-semibold">
+                      cm
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-stone-500">
+                    Largura padrão para envelopes ou caixas de envio.
+                  </p>
+                </div>
+
+                {/* Comprimento */}
+                <div className="p-4 rounded-2xl bg-stone-950 border border-stone-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-stone-200">
+                      Comprimento da Embalagem
+                    </label>
+                    <span className="text-[11px] text-stone-500">Mín. 16 cm</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="16"
+                      max="105"
+                      required
+                      value={lengthCm}
+                      onChange={(e) => setLengthCm(Math.max(16, parseInt(e.target.value) || 16))}
+                      placeholder="Ex: 20"
+                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white font-mono text-sm focus:outline-none focus:border-[#2A8882]"
+                    />
+                    <span className="absolute right-3 top-2 text-xs text-stone-500 font-semibold">
+                      cm
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-stone-500">
+                    Extensão frontal do pacote para transporte.
+                  </p>
+                </div>
+              </div>
+
+              {/* Cubagem e Resumo Calculado */}
+              <div className="p-4 rounded-2xl bg-stone-900/60 border border-stone-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 font-semibold text-white">
+                    <Box className="w-4 h-4 text-[#2A8882]" />
+                    <span>Embalagem Cadastrada: {lengthCm} x {widthCm} x {heightCm} cm</span>
+                  </div>
+                  <p className="text-stone-400 text-[11px]">
+                    Volume cúbico aproximado: <strong className="text-stone-200">{(lengthCm * widthCm * heightCm).toLocaleString()} cm³</strong> • Peso cúbico Correios: <strong className="text-stone-200">{((lengthCm * widthCm * heightCm) / 6000).toFixed(2)} kg</strong>
+                  </p>
+                </div>
+
+                <div className="px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-800 text-emerald-300 font-semibold text-[11px] shrink-0 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Pronto para Melhor Envio & Correios</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+          {/* ABA 5: TABELA DE MEDIDAS */}
           {activeTab === 'sizechart' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between p-4 rounded-2xl bg-stone-950 border border-stone-800">

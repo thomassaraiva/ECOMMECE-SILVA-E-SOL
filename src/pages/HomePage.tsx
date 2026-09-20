@@ -1,13 +1,74 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { HeroBanner } from '../components/home/HeroBanner';
 import { CategoryGrid } from '../components/home/CategoryGrid';
 import { FeaturedRow } from '../components/home/FeaturedRow';
 import { BrandStory } from '../components/home/BrandStory';
 import { useStore } from '../context/StoreContext';
+import { supabase } from '../lib/supabase';
+import { Product } from '../types/ecommerce';
 import { ShieldCheck, Truck, RefreshCw, MessageCircle } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
-  const { products } = useStore();
+  const { products: storeProducts } = useStore();
+  const [supabaseProducts, setSupabaseProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Busca direta na tabela 'products' do Supabase para a vitrine
+  useEffect(() => {
+    async function fetchVitrineProducts() {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase.from('products').select('*');
+
+        if (error) {
+          console.warn('Aviso ao buscar produtos do Supabase para a vitrine:', error.message);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const mapped: Product[] = data.map((p: any) => ({
+            id: String(p.id),
+            name: p.name,
+            slug: p.slug,
+            sku: p.sku || undefined,
+            brand: p.brand || 'Silva e Sol',
+            description: p.description,
+            detailedDescription: p.detailed_description || p.detailedDescription,
+            price: Number(p.price),
+            promotionalPrice: (p.promotional_price || p.promotionalPrice) ? Number(p.promotional_price || p.promotionalPrice) : undefined,
+            isOnSale: Boolean(p.is_on_sale ?? p.isOnSale),
+            isFeatured: Boolean(p.is_featured ?? p.isFeatured),
+            isNew: Boolean(p.is_new ?? p.isNew),
+            isActive: p.is_active !== undefined ? Boolean(p.is_active) : (p.isActive !== undefined ? Boolean(p.isActive) : true),
+            categoryId: p.category_id || p.categoryId || 'cat-sungas',
+            subcategoryId: p.subcategory_id || p.subcategoryId,
+            stockQuantity: Number(p.stock_quantity ?? p.stockQuantity ?? 0),
+            colors: Array.isArray(p.colors) ? p.colors : [],
+            sizes: Array.isArray(p.sizes) ? p.sizes : [],
+            models: Array.isArray(p.models) ? p.models : [],
+            images: Array.isArray(p.images) ? p.images : [],
+            videoUrl: p.video_url || p.videoUrl,
+            variants: p.variants,
+            sizeChart: p.size_chart || p.sizeChart,
+            seoTitle: p.seo_title || p.seoTitle,
+            seoDescription: p.seo_description || p.seoDescription,
+            createdAt: p.created_at || p.createdAt,
+            updatedAt: p.updated_at || p.updatedAt
+          }));
+          setSupabaseProducts(mapped);
+        }
+      } catch (err) {
+        console.warn('Erro ao conectar ao Supabase para vitrine:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchVitrineProducts();
+  }, []);
+
+  // Usa produtos do Supabase quando disponíveis, com fallback elegante para o store context
+  const products = supabaseProducts.length > 0 ? supabaseProducts : storeProducts;
 
   const featuredProducts = products.filter(p => p.isFeatured && p.isActive);
   const newProducts = products.filter(p => p.isNew && p.isActive);
