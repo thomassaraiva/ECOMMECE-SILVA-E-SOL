@@ -75,19 +75,23 @@ export function saveLocalStoreState(state: StoreState): void {
       // Cria uma versão de cache enxuta para o localStorage para não bloquear a interface
       const lightweightState: StoreState = {
         ...state,
+        banners: state.banners.map(b => ({
+          ...b,
+          imageUrl: (b.imageUrl?.startsWith('data:image') && b.imageUrl.length > 30000) ? b.imageUrl.slice(0, 100) + '...' : b.imageUrl,
+          mobileImageUrl: (b.mobileImageUrl?.startsWith('data:image') && b.mobileImageUrl.length > 30000) ? b.mobileImageUrl.slice(0, 100) + '...' : b.mobileImageUrl
+        })),
         products: state.products.map(p => ({
           ...p,
-          // Se a imagem for um base64 gigantesco, encurta no cache local do navegador
-          images: p.images.map(img => (img.startsWith('data:image') && img.length > 50000 ? img.slice(0, 200) + '...' : img)),
+          // Se a imagem for um base64 longo, encurta no cache local do navegador
+          images: p.images.map(img => (img.startsWith('data:image') && img.length > 30000 ? img.slice(0, 200) + '...' : img)),
           variants: p.variants?.map(v => ({
             ...v,
-            imageUrl: (v.imageUrl?.startsWith('data:image') && v.imageUrl.length > 50000) ? undefined : v.imageUrl
+            imageUrl: (v.imageUrl?.startsWith('data:image') && v.imageUrl.length > 30000) ? undefined : v.imageUrl
           }))
         }))
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(lightweightState));
     } catch (innerErr) {
-      // Ignora erro silenciosamente caso a memória do dispositivo esteja completamente lotada
       console.warn('Não foi possível persistir no localStorage; os dados permanecem na memória e no Supabase.');
     }
   }
@@ -350,10 +354,20 @@ export const StoreService = {
           link_url: banner.ctaLink || banner.linkUrl || 'sungas',
           button_text: banner.ctaText || banner.buttonText || 'Ver Coleção',
           display_order: banner.displayOrder ?? banner.order ?? 1,
-          is_active: banner.isActive !== false
+          is_active: banner.isActive !== false,
+          object_position: banner.objectPosition || 'center center',
+          mobile_object_position: banner.mobileObjectPosition || 'center center'
         };
 
-        const { data, error } = await supabase.from('banners').insert([payload]).select();
+        let { data, error } = await supabase.from('banners').insert([payload]).select();
+        if (error && (error.message?.includes('object_position') || error.message?.includes('column'))) {
+          // Se a tabela ainda não tiver as colunas de posição, tenta sem elas
+          const { object_position, mobile_object_position, ...safePayload } = payload;
+          const retry = await supabase.from('banners').insert([safePayload]).select();
+          data = retry.data;
+          error = retry.error;
+        }
+
         if (error) {
           console.warn('Erro ao inserir banner no Supabase:', error.message);
         } else if (data && data[0]?.id) {
@@ -389,8 +403,14 @@ export const StoreService = {
           payload.display_order = updates.displayOrder ?? updates.order;
         }
         if (updates.isActive !== undefined) payload.is_active = updates.isActive;
+        if (updates.objectPosition !== undefined) payload.object_position = updates.objectPosition;
+        if (updates.mobileObjectPosition !== undefined) payload.mobile_object_position = updates.mobileObjectPosition;
 
-        await supabase.from('banners').update(payload).eq('id', id);
+        const { error } = await supabase.from('banners').update(payload).eq('id', id);
+        if (error && (error.message?.includes('object_position') || error.message?.includes('column'))) {
+          const { object_position, mobile_object_position, ...safePayload } = payload;
+          await supabase.from('banners').update(safePayload).eq('id', id);
+        }
       } catch (err) {
         console.warn('Erro ao atualizar banner no Supabase:', err);
       }

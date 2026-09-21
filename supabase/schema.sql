@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   colors TEXT[] DEFAULT ARRAY[]::TEXT[],
   models TEXT[] DEFAULT ARRAY[]::TEXT[],
   size_chart JSONB,
+  variants JSONB DEFAULT '[]'::jsonb,
   seo_title TEXT,
   seo_description TEXT,
   weight_grams NUMERIC(8,2) DEFAULT 250,
@@ -111,8 +112,15 @@ CREATE TABLE IF NOT EXISTS public.banners (
   button_text VARCHAR(100) DEFAULT 'Ver Coleção',
   display_order INT DEFAULT 1,
   is_active BOOLEAN DEFAULT TRUE,
+  object_position VARCHAR(50) DEFAULT 'center',
+  mobile_object_position VARCHAR(50) DEFAULT 'center',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Adição idempotente de colunas caso as tabelas já existam
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS variants JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.banners ADD COLUMN IF NOT EXISTS object_position VARCHAR(50) DEFAULT 'center';
+ALTER TABLE public.banners ADD COLUMN IF NOT EXISTS mobile_object_position VARCHAR(50) DEFAULT 'center';
 
 -- 8. Tabela de Perfis de Clientes (Customer Profiles)
 CREATE TABLE IF NOT EXISTS public.customer_profiles (

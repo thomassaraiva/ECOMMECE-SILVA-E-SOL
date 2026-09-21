@@ -35,7 +35,7 @@ import { Product, Category, Subcategory, SizeChart, SizeChartRow, ProductVariant
 import { useStore } from '../../context/StoreContext';
 import { getDefaultSizeChartForCategory, SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
 import { optimizeProductVariantImage, formatBytes } from '../../lib/imageOptimizer';
-import { supabase } from '../../lib/supabase';
+import { supabase, uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
 
 interface AdminProductModalProps {
   isOpen: boolean;
@@ -87,11 +87,12 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Aba 3: Variações & Estoque
-  const [sizesStr, setSizesStr] = useState('P, M, G, GG');
-  const [colorsStr, setColorsStr] = useState('Amarelo Solar, Verde Musgo, Azul Marinho, Terracota');
-  const [modelsStr, setModelsStr] = useState('Tradicional, Slim');
+  const [sizesStr, setSizesStr] = useState('P (38), M (40), G (42), GG (44-46)');
+  const [colorsStr, setColorsStr] = useState('Verde, Azul, Branco, Preto');
+  const [modelsStr, setModelsStr] = useState('Slim Lateral 9cm, Tradicional');
   const [stockQuantity, setStockQuantity] = useState(20);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [colorImages, setColorImages] = useState<Record<string, string>>({});
 
   // Estados para Upload e Compressão Leve de Fotos por Variação (Celular/Notebook)
   const [optimizingVariantIndex, setOptimizingVariantIndex] = useState<number | null>(null);
@@ -99,17 +100,12 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [variantUploadNotice, setVariantUploadNotice] = useState<string | null>(null);
   const [previewModalImage, setPreviewModalImage] = useState<{ url: string; title: string; info?: string } | null>(null);
 
-  // Aba 4: Tabela de Medidas
+  // Aba 4: Tabela de Medidas (Preset padrão oficial Sungas Silva e Sol)
   const [hasSizeChart, setHasSizeChart] = useState(true);
-  const [sizeChartTitle, setSizeChartTitle] = useState('Guia de Tamanhos & Medidas');
-  const [sizeChartInstructions, setSizeChartInstructions] = useState('Meça com fita métrica relaxada sem apertar a pele.');
-  const [sizeChartColumns, setSizeChartColumns] = useState<string[]>(['Tamanho', 'Cintura (cm)', 'Quadril (cm)', 'Lateral (cm)']);
-  const [sizeChartRows, setSizeChartRows] = useState<SizeChartRow[]>([
-    { size: 'P', values: ['76 - 80 cm', '90 - 94 cm', '10 cm'] },
-    { size: 'M', values: ['82 - 86 cm', '96 - 100 cm', '11 cm'] },
-    { size: 'G', values: ['88 - 92 cm', '102 - 106 cm', '12 cm'] },
-    { size: 'GG', values: ['94 - 98 cm', '108 - 114 cm', '13 cm'] }
-  ]);
+  const [sizeChartTitle, setSizeChartTitle] = useState(SIZE_CHART_PRESETS[0].chart.title);
+  const [sizeChartInstructions, setSizeChartInstructions] = useState(SIZE_CHART_PRESETS[0].chart.instructions || '');
+  const [sizeChartColumns, setSizeChartColumns] = useState<string[]>(SIZE_CHART_PRESETS[0].chart.columns);
+  const [sizeChartRows, setSizeChartRows] = useState<SizeChartRow[]>(SIZE_CHART_PRESETS[0].chart.rows);
 
   // Aba Logística & Embalagem (Melhor Envio & Correios)
   const [weightGrams, setWeightGrams] = useState<number>(200);
@@ -152,6 +148,15 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setColorsStr((productToEdit.colors || []).join(', '));
       setModelsStr((productToEdit.models || []).join(', '));
       setVariants(productToEdit.variants || []);
+
+      const initialColorImgs: Record<string, string> = {};
+      productToEdit.variants?.forEach(v => {
+        if (v.color && v.imageUrl && !initialColorImgs[v.color.toLowerCase()]) {
+          initialColorImgs[v.color.toLowerCase()] = v.imageUrl;
+        }
+      });
+      setColorImages(initialColorImgs);
+
       setSeoTitle(productToEdit.seoTitle || productToEdit.name);
       setSeoDescription(productToEdit.seoDescription || productToEdit.description);
       setWeightGrams(productToEdit.weightGrams ?? 200);
@@ -169,7 +174,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         setHasSizeChart(false);
       }
     } else {
-      // Padrão para novo produto
+      // Padrão para novo produto - pré-configurado para moda praia masculina / sungas
       setName('');
       setSlug('');
       setSku('');
@@ -192,11 +197,17 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
       ]);
       setVideoUrl('');
-      setSizesStr('P, M, G, GG');
-      setColorsStr('Amarelo Solar, Verde Musgo, Azul Marinho, Terracota');
-      setModelsStr('Tradicional, Slim');
+      setSizesStr('P (38), M (40), G (42), GG (44-46)');
+      setColorsStr('Verde, Azul, Branco, Preto');
+      setModelsStr('Slim Lateral 9cm, Tradicional');
       setVariants([]);
+      setColorImages({});
       setHasSizeChart(true);
+      const sungasPreset = SIZE_CHART_PRESETS[0].chart;
+      setSizeChartTitle(sungasPreset.title);
+      setSizeChartInstructions(sungasPreset.instructions || '');
+      setSizeChartColumns(sungasPreset.columns);
+      setSizeChartRows(sungasPreset.rows);
       setSeoTitle('');
       setSeoDescription('');
     }
@@ -286,7 +297,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Gerar variações automáticas
+  // Gerar variações automáticas preservando fotos já atribuídas
   const handleGenerateVariantsGrid = () => {
     const sizes = sizesStr.split(',').map(s => s.trim()).filter(Boolean);
     const colors = colorsStr.split(',').map(c => c.trim()).filter(Boolean);
@@ -299,7 +310,13 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     (sizes.length ? sizes : [undefined]).forEach(size => {
       (colors.length ? colors : [undefined]).forEach(color => {
         (models.length ? models : [undefined]).forEach(model => {
-          const varSku = `${baseSku}${size ? `-${size}` : ''}${color ? `-${color.slice(0, 3).toUpperCase()}` : ''}`;
+          const varSku = `${baseSku}${size ? `-${size.replace(/[^a-zA-Z0-9]/g, '')}` : ''}${color ? `-${color.slice(0, 3).toUpperCase()}` : ''}`;
+          
+          // Preserva imagem da cor se já foi enviada ou de variação anterior
+          const existingImg = (color ? colorImages[color.toLowerCase()] : undefined) ||
+            variants.find(v => v.color?.toLowerCase() === color?.toLowerCase() && v.size === size)?.imageUrl ||
+            variants.find(v => v.color?.toLowerCase() === color?.toLowerCase())?.imageUrl;
+
           generated.push({
             id: `var-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
             productId: productToEdit?.id || '',
@@ -309,22 +326,28 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
             sku: varSku,
             stockQuantity: Math.floor(stockQuantity / Math.max(1, (sizes.length * (colors.length || 1)))),
             price: price,
-            isAvailable: true
+            isAvailable: true,
+            imageUrl: existingImg
           });
         });
       });
     });
 
     setVariants(generated);
+    setVariantUploadNotice(`Grade gerada com ${generated.length} variação(ões).`);
+    setTimeout(() => setVariantUploadNotice(null), 3500);
   };
 
-  // Aplicar Preset de Medidas
-  const handleApplySizeChartPreset = (categoryNameKey: string) => {
-    const preset = getDefaultSizeChartForCategory(categoryNameKey);
-    setSizeChartTitle(preset.title);
-    setSizeChartInstructions(preset.instructions || '');
-    setSizeChartColumns(preset.columns);
-    setSizeChartRows(preset.rows);
+  // Aplicar Preset de Medidas (ex: Sungas, Camisetas, Regatas, Shorts)
+  const handleApplySizeChartPreset = (presetId: string) => {
+    const found = SIZE_CHART_PRESETS.find(p => p.id === presetId || p.categoryMatch.includes(presetId));
+    const chart = found ? found.chart : SIZE_CHART_PRESETS[0].chart;
+    setSizeChartTitle(chart.title);
+    setSizeChartInstructions(chart.instructions || '');
+    setSizeChartColumns([...chart.columns]);
+    setSizeChartRows(chart.rows.map(r => ({ ...r, values: [...r.values] })));
+    setVariantUploadNotice(`Tabela de medidas aplicada: "${chart.title}"`);
+    setTimeout(() => setVariantUploadNotice(null), 3500);
   };
 
   // Upload e compressão leve no navegador para foto de variação individual (celular ou notebook)
@@ -334,10 +357,28 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     setVariantUploadNotice(null);
     try {
       const optimized = await optimizeProductVariantImage(file);
-      setVariants(prev => prev.map((item, idx) => idx === index ? { ...item, imageUrl: optimized.dataUrl } : item));
+      let finalUrl = optimized.dataUrl;
+
+      if (isSupabaseConfigured) {
+        const storageUrl = await uploadImageToSupabaseStorage(file, 'products', `variant-${index}`);
+        if (storageUrl) {
+          finalUrl = storageUrl;
+        }
+      }
+
+      setVariants(prev => prev.map((item, idx) => idx === index ? { ...item, imageUrl: finalUrl } : item));
+
+      // Se a variação tiver cor, atualiza também o mapa de fotos por cor
+      const targetVar = variants[index];
+      if (targetVar?.color) {
+        setColorImages(prev => ({
+          ...prev,
+          [targetVar.color!.toLowerCase()]: finalUrl
+        }));
+      }
 
       // Disponibiliza na galeria geral de fotos do produto caso ainda não esteja
-      setImages(prev => prev.includes(optimized.dataUrl) ? prev : [...prev, optimized.dataUrl]);
+      setImages(prev => prev.includes(finalUrl) ? prev : [...prev, finalUrl]);
 
       setVariantUploadNotice(
         `Foto da variação processada com sucesso: ${optimized.originalSizeFormatted} → ${optimized.compressedSizeFormatted} (-${optimized.savingsPercent}%)`
@@ -369,23 +410,78 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     setVariantUploadNotice(null);
     try {
       const optimized = await optimizeProductVariantImage(file);
-      setVariants(prev => prev.map(item => {
-        if (item.color && item.color.toLowerCase() === colorName.toLowerCase()) {
-          return { ...item, imageUrl: optimized.dataUrl };
+      let finalUrl = optimized.dataUrl;
+
+      if (isSupabaseConfigured) {
+        const storageUrl = await uploadImageToSupabaseStorage(file, 'products', `color-${colorName}`);
+        if (storageUrl) {
+          finalUrl = storageUrl;
         }
-        return item;
+      }
+
+      // 1. Guarda no mapa de cores
+      setColorImages(prev => ({
+        ...prev,
+        [colorName.toLowerCase()]: finalUrl
       }));
 
-      // Adiciona na galeria geral do produto
-      setImages(prev => prev.includes(optimized.dataUrl) ? prev : [...prev, optimized.dataUrl]);
+      // 2. Adiciona na galeria geral do produto
+      setImages(prev => prev.includes(finalUrl) ? prev : [...prev, finalUrl]);
 
-      const count = variants.filter(v => v.color?.toLowerCase() === colorName.toLowerCase()).length;
+      // 3. Atualiza ou gera as variações correspondentes
+      setVariants(prev => {
+        if (prev.length === 0) {
+          // Se ainda não gerou variações, gera automaticamente com os tamanhos definidos
+          const sizes = sizesStr.split(',').map(s => s.trim()).filter(Boolean);
+          const currentSizes = sizes.length > 0 ? sizes : ['P (38)', 'M (40)', 'G (42)', 'GG (44-46)'];
+          const baseSku = sku || 'SOL';
+          return currentSizes.map(size => ({
+            id: `var-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            productId: productToEdit?.id || '',
+            size,
+            color: colorName,
+            sku: `${baseSku}-${size.replace(/[^a-zA-Z0-9]/g, '')}-${colorName.slice(0, 3).toUpperCase()}`,
+            stockQuantity: Math.floor(stockQuantity / Math.max(1, currentSizes.length)),
+            price: price,
+            isAvailable: true,
+            imageUrl: finalUrl
+          }));
+        }
+
+        const hasColor = prev.some(item => item.color?.toLowerCase() === colorName.toLowerCase());
+        if (!hasColor) {
+          // Cria as variações para essa nova cor
+          const existingSizes = Array.from(new Set(prev.map(p => p.size).filter(Boolean))) as string[];
+          const sizesToUse = existingSizes.length > 0 ? existingSizes : ['P (38)', 'M (40)', 'G (42)', 'GG (44-46)'];
+          const newVars = sizesToUse.map(size => ({
+            id: `var-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            productId: productToEdit?.id || '',
+            size,
+            color: colorName,
+            sku: `${sku || 'SOL'}-${size.replace(/[^a-zA-Z0-9]/g, '')}-${colorName.slice(0, 3).toUpperCase()}`,
+            stockQuantity: 5,
+            price: price,
+            isAvailable: true,
+            imageUrl: finalUrl
+          }));
+          return [...prev, ...newVars];
+        }
+
+        return prev.map(item => {
+          if (item.color && item.color.toLowerCase() === colorName.toLowerCase()) {
+            return { ...item, imageUrl: finalUrl };
+          }
+          return item;
+        });
+      });
+
       setVariantUploadNotice(
-        `Foto da cor "${colorName}" comprimida (${optimized.compressedSizeFormatted}) e aplicada a ${count} variação(ões)!`
+        `Foto da cor "${colorName}" comprimida (${optimized.compressedSizeFormatted}) e vinculada às variações com sucesso!`
       );
       setTimeout(() => setVariantUploadNotice(null), 4500);
-    } catch (err) {
-      console.error('Erro ao otimizar imagem em lote por cor:', err);
+    } catch (err: any) {
+      console.error('Erro ao otimizar imagem por cor:', err);
+      alert('Falha ao processar imagem da cor: ' + (err?.message || err));
     } finally {
       setOptimizingColorName(null);
     }
@@ -397,6 +493,11 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     if (!sourceVariant || !sourceVariant.imageUrl || !sourceVariant.color) return;
 
     const targetColor = sourceVariant.color;
+    setColorImages(prev => ({
+      ...prev,
+      [targetColor.toLowerCase()]: sourceVariant.imageUrl!
+    }));
+
     setVariants(prev => prev.map(item => {
       if (item.color && item.color.toLowerCase() === targetColor.toLowerCase()) {
         return { ...item, imageUrl: sourceVariant.imageUrl };
@@ -472,7 +573,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         lengthCm: Number(lengthCm) || 20
       };
 
-      // Inserção direta na tabela 'products' do Supabase via .insert()
+      // Inserção direta na tabela 'products' do Supabase com tratamento resiliente de colunas
       let supabaseCreatedId: string | undefined;
       try {
         const supabaseRow: Record<string, any> = {
@@ -513,24 +614,31 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
             .update(supabaseRow)
             .eq('id', productToEdit.id);
 
-          if (sbUpdateErr) {
-            console.warn('Aviso ao atualizar no Supabase:', sbUpdateErr.message);
+          if (sbUpdateErr && (sbUpdateErr.message?.includes('variants') || sbUpdateErr.message?.includes('column'))) {
+            // Tenta sem a coluna variants caso o schema no Supabase ainda não a tenha
+            const { variants, ...cleanRow } = supabaseRow;
+            await supabase.from('products').update(cleanRow).eq('id', productToEdit.id);
           }
         } else {
           // Chamada .insert() na tabela products do Supabase
-          const { data: sbInsertData, error: sbInsertErr } = await supabase
+          let { data: sbInsertData, error: sbInsertErr } = await supabase
             .from('products')
             .insert([supabaseRow])
             .select();
 
-          if (sbInsertErr) {
-            console.warn('Aviso ao inserir no Supabase:', sbInsertErr.message);
-          } else if (sbInsertData && sbInsertData[0]?.id) {
+          if (sbInsertErr && (sbInsertErr.message?.includes('variants') || sbInsertErr.message?.includes('column'))) {
+            const { variants, ...cleanRow } = supabaseRow;
+            const retry = await supabase.from('products').insert([cleanRow]).select();
+            sbInsertData = retry.data;
+            sbInsertErr = retry.error;
+          }
+
+          if (sbInsertData && sbInsertData[0]?.id) {
             supabaseCreatedId = String(sbInsertData[0].id);
           }
         }
       } catch (sbErr) {
-        console.warn('Erro ao comunicar com Supabase:', sbErr);
+        console.warn('Aviso de comunicação com Supabase (salvo localmente):', sbErr);
       }
 
       if (productToEdit) {
@@ -1211,37 +1319,110 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-[11px] text-stone-400 mb-1 font-medium">Tamanhos disponíveis</label>
+                  {/* Tamanhos */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] text-stone-400 font-medium">Tamanhos disponíveis</label>
+                      <span className="text-[10px] text-stone-500">Separar por vírgula</span>
+                    </div>
                     <input
                       type="text"
                       value={sizesStr}
                       onChange={(e) => setSizesStr(e.target.value)}
-                      placeholder="P, M, G, GG, XG"
+                      placeholder="P (38), M (40), G (42), GG (44-46)"
                       className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
                     />
+                    {/* Atalhos rápidos de tamanhos */}
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {[
+                        { label: 'Sungas (P-GG)', val: 'P (38), M (40), G (42), GG (44-46)' },
+                        { label: 'Padrão (P a GG)', val: 'P, M, G, GG' },
+                        { label: 'Numérica (38-44)', val: '38, 40, 42, 44' },
+                        { label: '+ XG', val: 'P, M, G, GG, XG' }
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setSizesStr(preset.val)}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-stone-900 hover:bg-[#2A8882]/20 text-stone-400 hover:text-white border border-stone-800 transition-colors"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] text-stone-400 mb-1 font-medium">Cores disponíveis</label>
+                  {/* Cores */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] text-stone-400 font-medium">Cores disponíveis</label>
+                      <span className="text-[10px] text-stone-500">Separar por vírgula</span>
+                    </div>
                     <input
                       type="text"
                       value={colorsStr}
                       onChange={(e) => setColorsStr(e.target.value)}
-                      placeholder="Amarelo Solar, Verde Musgo, Preto"
+                      placeholder="Verde, Azul, Branco, Preto"
                       className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
                     />
+                    {/* Atalhos rápidos de cores populares Silva e Sol */}
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {['Verde', 'Azul', 'Branco', 'Preto', 'Amarelo Solar', 'Terracota'].map((cName) => {
+                        const isAdded = colorsStr.toLowerCase().includes(cName.toLowerCase());
+                        return (
+                          <button
+                            key={cName}
+                            type="button"
+                            onClick={() => {
+                              const list = colorsStr.split(',').map(s => s.trim()).filter(Boolean);
+                              if (isAdded) {
+                                setColorsStr(list.filter(c => c.toLowerCase() !== cName.toLowerCase()).join(', '));
+                              } else {
+                                setColorsStr([...list, cName].join(', '));
+                              }
+                            }}
+                            className={`text-[10px] px-2 py-0.5 rounded-md transition-colors border ${
+                              isAdded 
+                                ? 'bg-[#2A8882] text-white border-[#2A8882] font-semibold' 
+                                : 'bg-stone-900 text-stone-400 hover:text-white border-stone-800'
+                            }`}
+                          >
+                            {isAdded ? `✓ ${cName}` : `+ ${cName}`}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] text-stone-400 mb-1 font-medium">Cortes / Modelos</label>
+                  {/* Cortes / Modelos */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] text-stone-400 font-medium">Cortes / Modelos</label>
+                      <span className="text-[10px] text-stone-500">Separar por vírgula</span>
+                    </div>
                     <input
                       type="text"
                       value={modelsStr}
                       onChange={(e) => setModelsStr(e.target.value)}
-                      placeholder="Tradicional, Slim, Boxer"
+                      placeholder="Slim Lateral 9cm, Tradicional, Boxer"
                       className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
                     />
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {[
+                        { label: 'Sungas Slim (9cm)', val: 'Slim Lateral 9cm, Tradicional' },
+                        { label: 'Boxer & Tradicional', val: 'Boxer, Tradicional' },
+                        { label: 'Padrão Único', val: 'Padrão' }
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setModelsStr(preset.val)}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-stone-900 hover:bg-[#2A8882]/20 text-stone-400 hover:text-white border border-stone-800 transition-colors"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -1268,7 +1449,8 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                 const detectedColors = Array.from(
                   new Set([
                     ...colorsStr.split(',').map(c => c.trim()).filter(Boolean),
-                    ...variants.map(v => v.color?.trim()).filter(Boolean) as string[]
+                    ...variants.map(v => v.color?.trim()).filter(Boolean) as string[],
+                    ...Object.keys(colorImages).map(c => c.charAt(0).toUpperCase() + c.slice(1))
                   ])
                 );
 
@@ -1300,7 +1482,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
                       {detectedColors.map((colorName) => {
                         const matchingVariants = variants.filter(v => v.color?.toLowerCase() === colorName.toLowerCase());
-                        const colorImg = matchingVariants.find(v => v.imageUrl)?.imageUrl;
+                        const colorImg = colorImages[colorName.toLowerCase()] || matchingVariants.find(v => v.imageUrl)?.imageUrl;
                         const isOptimizingThisColor = optimizingColorName === colorName;
 
                         return (
@@ -1377,6 +1559,9 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                                     value={colorImg || ''}
                                     onChange={(e) => {
                                       const chosen = e.target.value;
+                                      if (chosen) {
+                                        setColorImages(prev => ({ ...prev, [colorName.toLowerCase()]: chosen }));
+                                      }
                                       setVariants(prev => prev.map(item => {
                                         if (item.color?.toLowerCase() === colorName.toLowerCase()) {
                                           return { ...item, imageUrl: chosen || undefined };
@@ -1399,6 +1584,11 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => {
+                                      setColorImages(prev => {
+                                        const next = { ...prev };
+                                        delete next[colorName.toLowerCase()];
+                                        return next;
+                                      });
                                       setVariants(prev => prev.map(item => {
                                         if (item.color?.toLowerCase() === colorName.toLowerCase()) {
                                           return { ...item, imageUrl: undefined };
@@ -1892,17 +2082,18 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                   {/* Botões de Predefinições Rápidas */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-2">
-                      Carregar Modelo Pré-definido:
+                      Carregar Modelo Pré-definido Oficial:
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {Object.keys(SIZE_CHART_PRESETS).map((key) => (
+                      {SIZE_CHART_PRESETS.map((preset) => (
                         <button
-                          key={key}
+                          key={preset.id}
                           type="button"
-                          onClick={() => handleApplySizeChartPreset(key)}
-                          className="px-3 py-1.5 rounded-xl bg-stone-950 border border-stone-800 hover:border-[#2A8882] text-stone-300 hover:text-[#2A8882] text-xs font-semibold transition-colors cursor-pointer"
+                          onClick={() => handleApplySizeChartPreset(preset.id)}
+                          className="px-3 py-1.5 rounded-xl bg-stone-900 border border-stone-800 hover:border-[#2A8882] hover:bg-[#2A8882]/10 text-stone-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
                         >
-                          {key}
+                          <Ruler className="w-3.5 h-3.5 text-[#2A8882]" />
+                          <span>{preset.name}</span>
                         </button>
                       ))}
                     </div>

@@ -22,18 +22,20 @@ import {
   Layers,
   ArrowUp,
   ArrowDown,
-  Maximize2
+  Maximize2,
+  Loader2
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Banner } from '../../types/ecommerce';
-import { formatBytes } from '../../lib/imageOptimizer';
-import { supabase } from '../../lib/supabase';
+import { formatBytes, optimizeBannerImage } from '../../lib/imageOptimizer';
+import { supabase, uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
 
 export const AdminBannersTab: React.FC = () => {
   const { banners, categories, products, addBanner, updateBanner, deleteBanner, toggleBannerStatus } = useStore();
 
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [listPreviewMode, setListPreviewMode] = useState<Record<string, 'desktop' | 'mobile'>>({});
 
   // Form states
@@ -107,8 +109,8 @@ export const AdminBannersTab: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // Upload direto de arquivo Desktop (JPG, PNG, WebP) do dispositivo sem converter para elemento Canvas
-  const handleDesktopFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload direto e otimizado de arquivo Desktop (JPG, PNG, WebP)
+  const handleDesktopFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -119,35 +121,36 @@ export const AdminBannersTab: React.FC = () => {
 
     try {
       setIsReadingDesktop(true);
-      const reader = new FileReader();
-      reader.onerror = () => {
-        alert('Erro ao carregar o arquivo selecionado.');
-        setIsReadingDesktop(false);
-      };
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) {
-          setImageUrl(result);
-          setDesktopFileInfo({
-            name: file.name,
-            sizeFormatted: formatBytes(file.size),
-            type: file.type || 'image/jpeg'
-          });
-          triggerSuccess(`Foto do Banner carregada com sucesso (${formatBytes(file.size)}).`);
+
+      // 1. Otimiza a imagem localmente (cria WebP leve e nítido de ~100-150KB)
+      const optimized = await optimizeBannerImage(file, 'desktop');
+
+      // 2. Se o Supabase Storage estiver configurado, envia para o bucket 'banners'
+      let finalUrl = optimized.dataUrl;
+      if (isSupabaseConfigured) {
+        const storageUrl = await uploadImageToSupabaseStorage(file, 'banners', 'banner-desktop');
+        if (storageUrl) {
+          finalUrl = storageUrl;
         }
-        setIsReadingDesktop(false);
-      };
-      reader.readAsDataURL(file);
+      }
+
+      setImageUrl(finalUrl);
+      setDesktopFileInfo({
+        name: file.name,
+        sizeFormatted: formatBytes(optimized.estimatedSize),
+        type: 'image/webp'
+      });
+      triggerSuccess(`Banner Desktop otimizado e anexado (${formatBytes(optimized.estimatedSize)})!`);
     } catch (err: any) {
       alert('Falha ao processar arquivo: ' + err.message);
-      setIsReadingDesktop(false);
     } finally {
+      setIsReadingDesktop(false);
       if (desktopFileInputRef.current) desktopFileInputRef.current.value = '';
     }
   };
 
-  // Upload direto de arquivo Mobile (JPG, PNG, WebP) do dispositivo sem converter para elemento Canvas
-  const handleMobileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload direto e otimizado de arquivo Mobile (JPG, PNG, WebP)
+  const handleMobileFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -158,29 +161,30 @@ export const AdminBannersTab: React.FC = () => {
 
     try {
       setIsReadingMobile(true);
-      const reader = new FileReader();
-      reader.onerror = () => {
-        alert('Erro ao carregar a imagem mobile selecionada.');
-        setIsReadingMobile(false);
-      };
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) {
-          setMobileImageUrl(result);
-          setMobileFileInfo({
-            name: file.name,
-            sizeFormatted: formatBytes(file.size),
-            type: file.type || 'image/jpeg'
-          });
-          triggerSuccess(`Foto Mobile carregada com sucesso (${formatBytes(file.size)}).`);
+
+      // 1. Otimiza a imagem localmente (cria WebP leve e nítido para mobile de ~60-90KB)
+      const optimized = await optimizeBannerImage(file, 'mobile');
+
+      // 2. Se o Supabase Storage estiver configurado, envia para o bucket 'banners'
+      let finalUrl = optimized.dataUrl;
+      if (isSupabaseConfigured) {
+        const storageUrl = await uploadImageToSupabaseStorage(file, 'banners', 'banner-mobile');
+        if (storageUrl) {
+          finalUrl = storageUrl;
         }
-        setIsReadingMobile(false);
-      };
-      reader.readAsDataURL(file);
+      }
+
+      setMobileImageUrl(finalUrl);
+      setMobileFileInfo({
+        name: file.name,
+        sizeFormatted: formatBytes(optimized.estimatedSize),
+        type: 'image/webp'
+      });
+      triggerSuccess(`Banner Mobile otimizado e anexado (${formatBytes(optimized.estimatedSize)})!`);
     } catch (err: any) {
       alert('Falha ao processar imagem mobile: ' + err.message);
-      setIsReadingMobile(false);
     } finally {
+      setIsReadingMobile(false);
       if (mobileFileInputRef.current) mobileFileInputRef.current.value = '';
     }
   };
@@ -192,68 +196,39 @@ export const AdminBannersTab: React.FC = () => {
       return;
     }
 
-    const payload = {
-      title: title.trim(),
-      subtitle: subtitle.trim() || undefined,
-      imageUrl: imageUrl.trim(),
-      mobileImageUrl: mobileImageUrl.trim() || undefined,
-      linkUrl: linkUrl.trim(),
-      buttonText: buttonText.trim() || undefined,
-      ctaText: buttonText.trim() || undefined,
-      ctaLink: linkUrl.trim(),
-      order,
-      isActive,
-      objectPosition,
-      mobileObjectPosition
-    };
-
-    // Chamada direta para a tabela 'banners' do Supabase
-    let supabaseBannerId: string | undefined;
+    setIsSaving(true);
     try {
-      const supabaseRow: Record<string, any> = {
-        title: payload.title,
-        subtitle: payload.subtitle || null,
-        image_url: payload.imageUrl,
-        mobile_image_url: payload.mobileImageUrl || null,
-        link_url: payload.ctaLink || payload.linkUrl,
-        button_text: payload.ctaText || payload.buttonText || 'Ver Coleção',
-        display_order: payload.order ?? 1,
-        is_active: payload.isActive
+      const payload: Omit<Banner, 'id'> = {
+        title: title.trim(),
+        subtitle: subtitle.trim() || undefined,
+        imageUrl: imageUrl.trim(),
+        mobileImageUrl: mobileImageUrl.trim() || undefined,
+        linkUrl: linkUrl.trim() || 'sungas',
+        buttonText: buttonText.trim() || 'Ver Coleção',
+        ctaText: buttonText.trim() || 'Ver Coleção',
+        ctaLink: linkUrl.trim() || 'sungas',
+        order: Number(order) || 1,
+        displayOrder: Number(order) || 1,
+        isActive,
+        objectPosition,
+        mobileObjectPosition
       };
 
       if (editingBanner) {
-        await supabase
-          .from('banners')
-          .update(supabaseRow)
-          .eq('id', editingBanner.id);
+        await updateBanner(editingBanner.id, payload);
+        triggerSuccess('Banner atualizado com sucesso no sistema e no banco!');
       } else {
-        const { data: insertedData, error: insErr } = await supabase
-          .from('banners')
-          .insert([supabaseRow])
-          .select();
-
-        if (insErr) {
-          console.warn('Aviso ao inserir banner no Supabase:', insErr.message);
-        } else if (insertedData && insertedData[0]?.id) {
-          supabaseBannerId = String(insertedData[0].id);
-        }
+        await addBanner(payload);
+        triggerSuccess('Banner cadastrado e publicado com sucesso!');
       }
-    } catch (sbErr) {
-      console.warn('Erro ao sincronizar banner no Supabase:', sbErr);
-    }
 
-    if (editingBanner) {
-      await updateBanner(editingBanner.id, payload);
-      triggerSuccess('Banner atualizado com sucesso.');
-    } else {
-      await addBanner({
-        ...payload,
-        ...(supabaseBannerId ? { id: supabaseBannerId } : {})
-      });
-      triggerSuccess('Banner cadastrado com sucesso.');
+      setIsModalOpen(false);
+    } catch (err: any) {
+      console.error('Erro ao salvar banner:', err);
+      alert('Erro ao salvar banner: ' + (err.message || 'Verifique sua conexão ou tente novamente.'));
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsModalOpen(false);
   };
 
   return (
@@ -863,11 +838,20 @@ export const AdminBannersTab: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isReadingDesktop || isReadingMobile}
-                  className="px-6 py-2.5 rounded-xl bg-[#2A8882] hover:bg-[#22706A] text-white font-bold shadow-lg transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  disabled={isReadingDesktop || isReadingMobile || isSaving}
+                  className="px-6 py-2.5 rounded-xl bg-[#2A8882] hover:bg-[#22706A] text-white font-bold shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>Salvar Banner</span>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Salvando no Banco...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Salvar Banner</span>
+                    </>
+                  )}
                 </button>
               </div>
 
