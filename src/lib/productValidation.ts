@@ -15,8 +15,11 @@ export function validatePromotion(
   return null;
 }
 
+export const DISCOUNT_PERCENT_ERROR = 'Informe um desconto entre 1% e 99%.';
+
 // Qual campo de preço a mensagem de validatePromotion aponta (para destacar no formulário).
-export function priceFieldForError(msg: string): 'promotionalPrice' | 'price' | null {
+export function priceFieldForError(msg: string): 'promotionalPrice' | 'price' | 'discountPercent' | null {
+  if (msg === DISCOUNT_PERCENT_ERROR) return 'discountPercent';
   if (msg === 'Informe um preço válido.') return 'price';
   if (msg.startsWith('O preço promocional') || msg === 'Informe um preço promocional válido.') return 'promotionalPrice';
   return null;

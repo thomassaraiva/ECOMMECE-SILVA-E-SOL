@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+
+afterEach(cleanup);
 
 // referência estável: o modal tem efeitos que dependem dessas listas
 const store = { categories: [], subcategories: [], addProduct: vi.fn(), updateProduct: vi.fn(), addCategory: vi.fn() };
@@ -31,5 +33,50 @@ describe('AdminProductModal - erro de promoção', () => {
     expect(promo).toHaveAttribute('aria-invalid', 'true');
     expect(promo).toHaveAttribute('aria-describedby', alert.id);
     expect(screen.getByLabelText(/Preço Normal/)).not.toHaveAttribute('aria-invalid', 'true');
+  });
+});
+
+describe('AdminProductModal - desconto em %', () => {
+  const open = () => {
+    render(<AdminProductModal isOpen onClose={vi.fn()} productToEdit={product} />);
+    fireEvent.click(screen.getByLabelText(/Ativar Preço Promocional/));
+    return {
+      pct: screen.getByLabelText('Desconto (%)') as HTMLInputElement,
+      promo: screen.getByLabelText(/Preço com Desconto/) as HTMLInputElement,
+    };
+  };
+
+  it('começa desabilitado sem promoção ativa', () => {
+    render(<AdminProductModal isOpen onClose={vi.fn()} productToEdit={product} />);
+    expect(screen.getByLabelText('Desconto (%)')).toBeDisabled();
+  });
+
+  it('digitar o % calcula o preço promocional', () => {
+    const { pct, promo } = open();
+    fireEvent.change(pct, { target: { value: '20' } });
+    expect(promo.value).toBe('103.92');
+  });
+
+  it('digitar o preço promocional atualiza o %', () => {
+    const { pct, promo } = open();
+    fireEvent.change(promo, { target: { value: '99.9' } });
+    expect(pct.value).toBe('23.1');
+  });
+
+  it('mudar o preço normal recalcula o promocional mantendo o %', () => {
+    const { pct, promo } = open();
+    fireEvent.change(pct, { target: { value: '20' } });
+    fireEvent.change(screen.getByLabelText(/Preço Normal/), { target: { value: '100' } });
+    expect(promo.value).toBe('80');
+  });
+
+  it('% inválido ao salvar mostra o aviso e marca o campo', () => {
+    const { pct } = open();
+    fireEvent.change(pct, { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: /Atualizar Produto/ }));
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Informe um desconto entre 1% e 99%.');
+    expect(pct).toHaveAttribute('aria-invalid', 'true');
+    expect(pct).toHaveAttribute('aria-describedby', alert.id);
   });
 });

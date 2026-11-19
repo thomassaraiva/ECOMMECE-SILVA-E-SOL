@@ -13,7 +13,6 @@ import {
   Layers,
   Tag,
   Ruler,
-  Percent,
   AlertCircle,
   Database,
   RefreshCw,
@@ -31,7 +30,8 @@ import {
 import { Product, SizeChart, SizeChartRow, ProductVariant } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
 import { SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
-import { validatePromotion, priceFieldForError } from '../../lib/productValidation';
+import { validatePromotion, priceFieldForError, DISCOUNT_PERCENT_ERROR } from '../../lib/productValidation';
+import { parsePercent, promoFromPercent, percentFromPromo } from '../../lib/pricing';
 import { uploadProductImage, PRODUCT_UPLOAD_ERROR } from '../../lib/productImageUpload';
 
 interface AdminProductModalProps {
@@ -69,6 +69,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [price, setPrice] = useState(89.90);
   const [promotionalPrice, setPromotionalPrice] = useState<number | undefined>(undefined);
   const [isOnSale, setIsOnSale] = useState(false);
+  const [discountText, setDiscountText] = useState('');
   const [promotionStartDate, setPromotionStartDate] = useState('');
   const [promotionEndDate, setPromotionEndDate] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
@@ -114,10 +115,22 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
 
-  // Cálculo de desconto percentual em tempo real
-  const calculatedDiscountPercent = promotionalPrice && price > promotionalPrice
-    ? Math.round(((price - promotionalPrice) / price) * 100)
-    : 0;
+  // O % é só auxílio de digitação: o que se grava é o preço promocional.
+  const handlePriceChange = (value: number) => {
+    setPrice(value);
+    const pct = parsePercent(discountText);
+    if (pct != null && value > 0) setPromotionalPrice(promoFromPercent(value, pct));
+  };
+  const handlePromoChange = (value: number | undefined) => {
+    setPromotionalPrice(value);
+    const pct = value == null ? null : percentFromPromo(price, value);
+    setDiscountText(pct == null ? '' : String(pct));
+  };
+  const handleDiscountChange = (text: string) => {
+    setDiscountText(text);
+    const pct = parsePercent(text);
+    if (pct != null && price > 0) setPromotionalPrice(promoFromPercent(price, pct));
+  };
 
   // Carregar dados na abertura
   useEffect(() => {
@@ -130,6 +143,8 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setDetailedDescription(productToEdit.detailedDescription || '');
       setPrice(productToEdit.price);
       setPromotionalPrice(productToEdit.promotionalPrice);
+      const pctInicial = productToEdit.promotionalPrice == null ? null : percentFromPromo(productToEdit.price, productToEdit.promotionalPrice);
+      setDiscountText(pctInicial == null ? '' : String(pctInicial));
       setIsOnSale(productToEdit.isOnSale);
       setPromotionStartDate(productToEdit.promotionStartDate || '');
       setPromotionEndDate(productToEdit.promotionEndDate || '');
@@ -180,6 +195,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setDetailedDescription('');
       setPrice(89.90);
       setPromotionalPrice(undefined);
+      setDiscountText('');
       setIsOnSale(false);
       setPromotionStartDate('');
       setPromotionEndDate('');
@@ -464,6 +480,11 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     if (images.length === 0) {
       setErrorMsg('Adicione pelo menos uma foto para o produto.');
       setActiveTab('media');
+      return;
+    }
+    if (isOnSale && discountText.trim() !== '' && parsePercent(discountText) == null) {
+      setErrorMsg(DISCOUNT_PERCENT_ERROR);
+      setActiveTab('general');
       return;
     }
     const promoError = isOnSale
@@ -803,7 +824,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                       step="0.01"
                       required
                       value={price}
-                      onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handlePriceChange(parseFloat(e.target.value) || 0)}
                       className={`w-full px-3.5 py-2 rounded-xl bg-stone-900 border ${invalidPriceField === 'price' ? 'border-red-500' : 'border-stone-800'} text-white text-sm font-bold focus:outline-none focus:border-[#2A8882]`}
                     />
                   </div>
@@ -820,26 +841,26 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                       step="0.01"
                       disabled={!isOnSale}
                       value={promotionalPrice || ''}
-                      onChange={(e) => setPromotionalPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+                      onChange={(e) => handlePromoChange(e.target.value ? parseFloat(e.target.value) : undefined)}
                       placeholder={isOnSale ? 'Ex: 69.90' : 'Desativado'}
                       className={`w-full px-3.5 py-2 rounded-xl bg-stone-900 border ${invalidPriceField === 'promotionalPrice' ? 'border-red-500' : 'border-stone-800'} text-white text-sm font-bold disabled:opacity-40 focus:outline-none focus:border-[#F4803E]`}
                     />
                   </div>
 
-                  {/* Indicador de Desconto Automático */}
-                  <div className="flex flex-col justify-end">
-                    {isOnSale && calculatedDiscountPercent > 0 ? (
-                      <div className="px-3 py-2 bg-[#F4803E]/15 border border-[#F4803E]/40 rounded-xl text-center">
-                        <span className="text-xs font-extrabold text-[#F4803E] flex items-center justify-center gap-1">
-                          <Percent className="w-3.5 h-3.5" />
-                          Desconto Calculado: -{calculatedDiscountPercent}% OFF
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="px-3 py-2 bg-stone-900 border border-stone-800/80 rounded-xl text-center text-xs text-stone-500">
-                        Nenhum desconto ativo
-                      </div>
-                    )}
+                  <div>
+                    <label htmlFor="product-discount-percent" className="block text-xs text-stone-400 mb-1 font-medium">Desconto (%)</label>
+                    <input
+                      id="product-discount-percent"
+                      aria-invalid={invalidPriceField === 'discountPercent' || undefined}
+                      aria-describedby={invalidPriceField === 'discountPercent' ? 'product-error-msg' : undefined}
+                      type="text"
+                      inputMode="decimal"
+                      disabled={!isOnSale}
+                      value={discountText}
+                      onChange={(e) => handleDiscountChange(e.target.value)}
+                      placeholder={isOnSale ? 'Ex: 20' : 'Desativado'}
+                      className={`w-full px-3.5 py-2 rounded-xl bg-stone-900 border ${invalidPriceField === 'discountPercent' ? 'border-red-500' : 'border-stone-800'} text-white text-sm font-bold disabled:opacity-40 focus:outline-none focus:border-[#F4803E]`}
+                    />
                   </div>
                 </div>
 

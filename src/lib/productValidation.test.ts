@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validatePromotion } from './productValidation';
+import { validatePromotion, priceFieldForError } from './productValidation';
 
 describe('validatePromotion', () => {
   it('aceita sem promoção', () => expect(validatePromotion(100, undefined)).toBeNull());
@@ -22,4 +22,10 @@ describe('validatePromotion com promoção ativa (required)', () => {
   });
   it('aceita promoção válida', () => expect(validatePromotion(100, 80, req)).toBeNull());
   it('ainda recusa promoção maior ou igual', () => expect(validatePromotion(100, 100, req)).toMatch(/menor que o preço normal/));
+});
+
+describe('priceFieldForError - desconto', () => {
+  it('aponta o campo do desconto em %', () => {
+    expect(priceFieldForError('Informe um desconto entre 1% e 99%.')).toBe('discountPercent');
+  });
 });
