@@ -29,7 +29,6 @@ import { AdminPromotionsTab } from './AdminPromotionsTab';
 import { AdminOrdersTab } from './AdminOrdersTab';
 import { AdminAboutUsTab } from './AdminAboutUsTab';
 import { AdminSettingsTab } from './AdminSettingsTab';
-import { AdminPixelsTab } from './AdminPixelsTab';
 import { AdminProductModal } from './AdminProductModal';
 
 export type AdminTab = 
@@ -248,7 +247,10 @@ export const AdminDashboard: React.FC = () => {
           )}
 
           {activeTab === 'pixels' && (
-            <AdminPixelsTab />
+            // Pixels não têm coluna no banco e dependem do aviso de cookies: a aba fica só informativa
+            <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 text-sm text-stone-300">
+              Os pixels de anúncio serão ativados junto com o aviso de cookies (etapa S4).
+            </div>
           )}
 
           {activeTab === 'about' && (

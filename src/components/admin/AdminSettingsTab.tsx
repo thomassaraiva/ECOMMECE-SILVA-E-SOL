@@ -8,18 +8,19 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { settingsFormToPayload } from '../../lib/adminForms';
 
 export const AdminSettingsTab: React.FC = () => {
   const { settings, updateSettings } = useStore();
 
   const [storeName, setStoreName] = useState(settings.storeName || 'Silva e Sol');
-  const [storeTagline, setStoreTagline] = useState(settings.storeTagline || 'Moda Masculina Praia & Solar');
+  const [tagline, setTagline] = useState(settings.tagline || '');
   const [whatsappNumber, setWhatsappNumber] = useState(settings.whatsappNumber || '5581920019982');
   const [contactEmail, setContactEmail] = useState(settings.contactEmail || 'contato@silvaesol.com.br');
   const [instagramHandle, setInstagramHandle] = useState(settings.instagramHandle || '@silvaesol');
   const [freeShippingThreshold, setFreeShippingThreshold] = useState<number | ''>(settings.freeShippingThreshold ?? '');
-  const [exchangePolicy, setExchangePolicy] = useState(settings.exchangePolicy || '');
-  const [shippingInfo, setShippingInfo] = useState(settings.shippingInfo || '');
+  const [returnPolicy, setReturnPolicy] = useState(settings.returnPolicy || '');
+  const [shippingPolicy, setShippingPolicy] = useState(settings.shippingPolicy || '');
   const [privacyPolicy, setPrivacyPolicy] = useState(
     settings.privacyPolicy || ''
   );
@@ -36,20 +37,10 @@ export const AdminSettingsTab: React.FC = () => {
     setIsSaving(true);
     setSaveErrorMsg('');
     try {
-      await updateSettings({
-        storeName: storeName.trim(),
-        storeTagline: storeTagline.trim(),
-        whatsappNumber: whatsappNumber.trim().replace(/\D/g, ''),
-        contactEmail: contactEmail.trim(),
-        instagramHandle: instagramHandle.trim(),
-        freeShippingThreshold: freeShippingThreshold === '' ? undefined : Number(freeShippingThreshold),
-        exchangePolicy: exchangePolicy.trim(),
-        shippingInfo: shippingInfo.trim(),
-        privacyPolicy: privacyPolicy.trim(),
-        legalName: legalName.trim(),
-        cnpj: cnpj.trim(),
-        address: address.trim()
-      });
+      await updateSettings(settingsFormToPayload({
+        storeName, tagline, whatsappNumber, contactEmail, instagramHandle, freeShippingThreshold,
+        returnPolicy, shippingPolicy, privacyPolicy, legalName, cnpj, address,
+      }));
       setActionSuccess('Configurações da loja salvas com sucesso!');
       setTimeout(() => setActionSuccess(''), 3000);
     } catch (err: any) {
@@ -106,8 +97,8 @@ export const AdminSettingsTab: React.FC = () => {
               <label className="block text-xs font-semibold text-stone-300 mb-1">Slogan / Tagline</label>
               <input
                 type="text"
-                value={storeTagline}
-                onChange={(e) => setStoreTagline(e.target.value)}
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs sm:text-sm focus:outline-none focus:border-[#2A8882]"
               />
             </div>
@@ -232,8 +223,8 @@ export const AdminSettingsTab: React.FC = () => {
               </label>
               <textarea
                 rows={3}
-                value={exchangePolicy}
-                onChange={(e) => setExchangePolicy(e.target.value)}
+                value={returnPolicy}
+                onChange={(e) => setReturnPolicy(e.target.value)}
                 className="w-full p-3 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
               />
             </div>
@@ -244,8 +235,8 @@ export const AdminSettingsTab: React.FC = () => {
               </label>
               <textarea
                 rows={3}
-                value={shippingInfo}
-                onChange={(e) => setShippingInfo(e.target.value)}
+                value={shippingPolicy}
+                onChange={(e) => setShippingPolicy(e.target.value)}
                 className="w-full p-3 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
               />
             </div>
