@@ -32,8 +32,7 @@ import { Product, SizeChart, SizeChartRow, ProductVariant } from '../../types/ec
 import { useStore } from '../../context/StoreContext';
 import { SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
 import { validatePromotion } from '../../lib/productValidation';
-import { optimizeProductVariantImage } from '../../lib/imageOptimizer';
-import { uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
+import { uploadProductImage, PRODUCT_UPLOAD_ERROR } from '../../lib/productImageUpload';
 
 interface AdminProductModalProps {
   isOpen: boolean;
@@ -82,7 +81,6 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [newImageUrl, setNewImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Aba 3: Variações & Estoque
   const [sizesStr, setSizesStr] = useState('P (38), M (40), G (42), GG (44-46)');
@@ -225,39 +223,21 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     if (!seoDescription) setSeoDescription(description || `Compre ${name} na Silva e Sol com atendimento direto via WhatsApp.`);
   };
 
-  // Upload de Imagens Múltiplas via FileReader
-  const handleImageFilesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file: File) => {
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        const result = uploadEvent.target?.result as string;
-        if (result) {
-          setImages(prev => [...prev, result]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
+  // Upload de fotos para o Storage (bucket products); falhou, mostra o erro e não guarda nada
+  const handleImageFilesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files: File[] = e.target.files ? Array.from(e.target.files) : [];
     if (e.target) e.target.value = '';
-  };
+    if (files.length === 0) return;
+    setErrorMsg('');
 
-  // Upload de Vídeo via FileReader
-  const handleVideoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const result = uploadEvent.target?.result as string;
-      if (result) {
-        setVideoUrl(result);
+    for (const file of files) {
+      try {
+        const url = await uploadProductImage(file, 'produto');
+        setImages(prev => [...prev, url]);
+      } catch {
+        setErrorMsg(PRODUCT_UPLOAD_ERROR);
       }
-    };
-    reader.readAsDataURL(file);
-    if (e.target) e.target.value = '';
+    }
   };
 
   const handleAddImageUrl = () => {
@@ -351,15 +331,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     setOptimizingVariantIndex(index);
     setVariantUploadNotice(null);
     try {
-      const optimized = await optimizeProductVariantImage(file);
-      let finalUrl = optimized.dataUrl;
-
-      if (isSupabaseConfigured) {
-        const storageUrl = await uploadImageToSupabaseStorage(file, 'products', `variant-${index}`);
-        if (storageUrl) {
-          finalUrl = storageUrl;
-        }
-      }
+      const finalUrl = await uploadProductImage(file, `variant-${index}`);
 
       setVariants(prev => prev.map((item, idx) => idx === index ? { ...item, imageUrl: finalUrl } : item));
 
@@ -375,24 +347,10 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       // Disponibiliza na galeria geral de fotos do produto caso ainda não esteja
       setImages(prev => prev.includes(finalUrl) ? prev : [...prev, finalUrl]);
 
-      setVariantUploadNotice(
-        `Foto da variação processada com sucesso: ${optimized.originalSizeFormatted} → ${optimized.compressedSizeFormatted} (-${optimized.savingsPercent}%)`
-      );
+      setVariantUploadNotice('Foto da variação enviada.');
       setTimeout(() => setVariantUploadNotice(null), 4500);
-    } catch (err: any) {
-      console.error('Erro ao otimizar foto da variação:', err);
-      // Fallback seguro via FileReader caso canvas encontre arquivo incomum
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        if (dataUrl) {
-          setVariants(prev => prev.map((item, idx) => idx === index ? { ...item, imageUrl: dataUrl } : item));
-          setImages(prev => prev.includes(dataUrl) ? prev : [...prev, dataUrl]);
-          setVariantUploadNotice('Foto carregada com sucesso para a variação.');
-          setTimeout(() => setVariantUploadNotice(null), 4000);
-        }
-      };
-      reader.readAsDataURL(file);
+    } catch {
+      setErrorMsg(PRODUCT_UPLOAD_ERROR);
     } finally {
       setOptimizingVariantIndex(null);
     }
@@ -404,15 +362,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     setOptimizingColorName(colorName);
     setVariantUploadNotice(null);
     try {
-      const optimized = await optimizeProductVariantImage(file);
-      let finalUrl = optimized.dataUrl;
-
-      if (isSupabaseConfigured) {
-        const storageUrl = await uploadImageToSupabaseStorage(file, 'products', `color-${colorName}`);
-        if (storageUrl) {
-          finalUrl = storageUrl;
-        }
-      }
+      const finalUrl = await uploadProductImage(file, `color-${colorName}`);
 
       // 1. Guarda no mapa de cores
       setColorImages(prev => ({
@@ -470,13 +420,10 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         });
       });
 
-      setVariantUploadNotice(
-        `Foto da cor "${colorName}" comprimida (${optimized.compressedSizeFormatted}) e vinculada às variações com sucesso!`
-      );
+      setVariantUploadNotice(`Foto da cor "${colorName}" enviada e vinculada às variações.`);
       setTimeout(() => setVariantUploadNotice(null), 4500);
-    } catch (err: any) {
-      console.error('Erro ao otimizar imagem por cor:', err);
-      alert('Falha ao processar imagem da cor: ' + (err?.message || err));
+    } catch {
+      setErrorMsg(PRODUCT_UPLOAD_ERROR);
     } finally {
       setOptimizingColorName(null);
     }
@@ -1168,24 +1115,8 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">Ou selecione um arquivo de vídeo local:</label>
-                      <button
-                        type="button"
-                        onClick={() => videoInputRef.current?.click()}
-                        className="w-full py-2 px-3 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Upload className="w-4 h-4 text-amber-400" />
-                        <span>Carregar arquivo MP4</span>
-                      </button>
-                      <input
-                        type="file"
-                        ref={videoInputRef}
-                        accept="video/mp4,video/webm"
-                        onChange={handleVideoFileUpload}
-                        className="hidden"
-                      />
-                    </div>
+                    {/* O bucket products só aceita fotos (jpeg/png/webp) */}
+                    <p className="text-[11px] text-stone-500">Vídeo disponível em breve: por enquanto, só por link.</p>
                   </div>
 
                   {/* Prévia do Vídeo no Painel */}
