@@ -4,6 +4,8 @@ import { buildWhatsAppOrderUrl } from '../lib/whatsappOrder';
 import { trackAddToCart, trackInitiateCheckout } from '../lib/analytics';
 import { PRODUCT_IMAGE_FALLBACK } from '../lib/placeholders';
 import { effectivePrice } from '../lib/pricing';
+import { reconcileCart } from '../lib/cartReconcile';
+import { useStore } from './StoreContext';
 
 interface CartContextType {
   cart: CartItem[];
@@ -20,11 +22,12 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_STORAGE_KEY = 'silva_e_sol_cart_v1';
+const CART_STORAGE_KEY = 'silva_e_sol_cart_v2';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
+      localStorage.removeItem('silva_e_sol_cart_v1'); // sacola antiga, com itens de demonstração
       const saved = localStorage.getItem(CART_STORAGE_KEY);
       return saved ? JSON.parse(saved) : [];
     } catch {
@@ -33,6 +36,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const { products, isLoading, loadError } = useStore();
+
+  // Quando a loja carrega, tira itens que não estão mais à venda e atualiza os preços
+  useEffect(() => {
+    if (isLoading || loadError || !products) return;
+    setCart(prev => reconcileCart(prev, products));
+  }, [products, isLoading, loadError]);
 
   useEffect(() => {
     try {
