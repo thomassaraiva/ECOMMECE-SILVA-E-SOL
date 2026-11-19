@@ -436,8 +436,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   });
 
+  // Vitrine: só produtos ativos (o painel usa a lista completa em products)
   const filteredProducts = useMemo(() => {
-    let result = [...storeState.products];
+    let result = storeState.products.filter(p => p.isActive);
 
     // Busca textual por nome, descrição, SKU ou tags
     if (filters.searchQuery && filters.searchQuery.trim()) {

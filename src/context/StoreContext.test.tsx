@@ -28,4 +28,17 @@ describe('StoreContext', () => {
     act(() => result.current.clearAdminData());
     expect(result.current.orders).toEqual([]);
   });
+
+  it('filteredProducts não mostra produto inativo; products (painel) mostra todos', async () => {
+    const { StoreService, EMPTY_STORE_STATE } = await import('../lib/storage');
+    const base = { slug: 's', description: '', price: 100, isOnSale: false, isFeatured: false, isNew: false,
+      categoryId: 'c1', stockQuantity: 1, colors: [], sizes: [], models: [], images: [] };
+    vi.mocked(StoreService.fetchAll).mockResolvedValueOnce({
+      ...EMPTY_STORE_STATE,
+      products: [{ ...base, id: 'a', name: 'Ativo', isActive: true }, { ...base, id: 'i', name: 'Inativo', isActive: false }] as any,
+    });
+    const { result } = renderHook(() => useStore(), { wrapper });
+    await waitFor(() => expect(result.current.products).toHaveLength(2));
+    expect(result.current.filteredProducts.map(p => p.id)).toEqual(['a']);
+  });
 });
