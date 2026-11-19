@@ -236,6 +236,7 @@ export interface Order {
   melhorEnvioProtocol?: string;
   items: OrderItem[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CatalogFilters {

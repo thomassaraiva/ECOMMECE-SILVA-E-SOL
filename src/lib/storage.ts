@@ -41,12 +41,56 @@ function describeDbError(error: { message?: string; code?: string }): string {
   if (error.code === '23514' && /promotional_price/.test(error.message || '')) {
     return 'o preço promocional precisa ser menor que o preço normal.';
   }
+  if (error.code === '23514') return 'um valor não respeita as regras (ex.: estoque negativo).';
   if (error.code === '23505') return 'já existe um item com esse nome de endereço (slug).';
+  if (error.code === '23503') return 'este item está ligado a outro registro.';
   return error.message || 'erro desconhecido.';
 }
 
 function assertSaved(error: any) {
   if (error) throw new Error(`Não foi possível salvar: ${describeDbError(error)}`);
+}
+
+// UPDATE/DELETE barrados pela RLS não dão erro: só afetam 0 linhas.
+function assertAffected(data: any[] | null) {
+  if (!data || data.length === 0) {
+    throw new Error('Não foi possível salvar: sem permissão ou item não encontrado. Entre de novo no painel com o código de duas etapas.');
+  }
+}
+
+function insertedRow(data: any[] | null): any {
+  const row = data?.[0];
+  if (!row) throw new Error('Não foi possível salvar: o banco não confirmou a gravação.');
+  return row;
+}
+
+function mapOrderRow(o: any): Order {
+  return {
+    id: String(o.id),
+    orderNumber: o.order_number,
+    customerName: o.customer_name,
+    customerEmail: o.customer_email || undefined,
+    customerPhone: o.customer_phone,
+    customerCpf: o.customer_cpf || undefined,
+    customerCity: o.customer_city || undefined,
+    customerAddress: o.customer_address || undefined,
+    customerNotes: o.customer_notes || undefined,
+    shippingCost: o.shipping_cost != null ? Number(o.shipping_cost) : undefined,
+    paymentMethod: o.payment_method,
+    paymentStatus: o.payment_status,
+    stoneTransactionId: o.stone_transaction_id || undefined,
+    subtotal: o.subtotal != null ? Number(o.subtotal) : undefined,
+    discount: o.discount != null ? Number(o.discount) : undefined,
+    total: Number(o.total),
+    status: o.status,
+    items: Array.isArray(o.items) ? o.items : [],
+    trackingCode: o.tracking_code || undefined,
+    trackingCarrier: o.tracking_carrier || undefined,
+    trackingUrl: o.tracking_url || undefined,
+    shippedAt: o.shipped_at || undefined,
+    createdAt: o.created_at,
+    updatedAt: o.updated_at,
+  };
 }
 
 export function mapProductRow(p: any): Product {
@@ -131,6 +175,7 @@ export const StoreService = {
         shippingPolicy: s.shipping_policy || undefined,
         returnPolicy: s.return_policy || undefined,
         privacyPolicy: s.privacy_policy || undefined,
+        freeShippingThreshold: s.free_shipping_threshold != null ? Number(s.free_shipping_threshold) : undefined,
       } : DEFAULT_SETTINGS,
       orders: [],
     };
@@ -140,7 +185,7 @@ export const StoreService = {
     const supabase = requireSupabase();
     const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
     if (error) throw new Error(`Não foi possível carregar os pedidos: ${describeDbError(error)}`);
-    return (data || []) as Order[];
+    return (data || []).map(mapOrderRow);
   },
 
   async insertProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<Product> {
@@ -148,6 +193,7 @@ export const StoreService = {
     const payload: Record<string, any> = {
       name: product.name,
       slug: product.slug,
+      brand: product.brand || 'Silva e Sol',
       description: product.description,
       price: product.price,
       stock_quantity: product.stockQuantity,
@@ -178,8 +224,8 @@ export const StoreService = {
 
     const { data, error } = await supabase.from('products').insert([payload]).select();
     assertSaved(error);
-    const row = data?.[0];
-    return { ...product, id: String(row.id), createdAt: row.created_at, updatedAt: row.created_at ?? row.updated_at };
+    const row = insertedRow(data);
+    return { ...product, id: String(row.id), createdAt: row.created_at, updatedAt: row.updated_at ?? row.created_at };
   },
 
   async updateProduct(id: string, updates: Partial<Product>): Promise<void> {
@@ -190,12 +236,20 @@ export const StoreService = {
 
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.slug !== undefined) payload.slug = updates.slug;
+    if (updates.brand !== undefined) payload.brand = updates.brand || 'Silva e Sol';
     if (updates.description !== undefined) payload.description = updates.description;
     if (updates.price !== undefined) payload.price = updates.price;
-    if (updates.promotionalPrice !== undefined) payload.promotional_price = updates.promotionalPrice;
     if (updates.stockQuantity !== undefined) payload.stock_quantity = updates.stockQuantity;
     if (updates.categoryId !== undefined) payload.category_id = updates.categoryId;
-    if (updates.subcategoryId !== undefined) payload.subcategory_id = updates.subcategoryId;
+    // Opcionais: a chave presente com undefined significa "limpar o campo".
+    if ('promotionalPrice' in updates) payload.promotional_price = updates.promotionalPrice ?? null;
+    if ('subcategoryId' in updates) payload.subcategory_id = updates.subcategoryId ?? null;
+    if ('sku' in updates) payload.sku = updates.sku ?? null;
+    if ('detailedDescription' in updates) payload.detailed_description = updates.detailedDescription ?? null;
+    if ('videoUrl' in updates) payload.video_url = updates.videoUrl ?? null;
+    if ('sizeChart' in updates) payload.size_chart = updates.sizeChart ?? null;
+    if ('seoTitle' in updates) payload.seo_title = updates.seoTitle ?? null;
+    if ('seoDescription' in updates) payload.seo_description = updates.seoDescription ?? null;
     if (updates.isActive !== undefined) payload.is_active = updates.isActive;
     if (updates.isFeatured !== undefined) payload.is_featured = updates.isFeatured;
     if (updates.isNew !== undefined) payload.is_new = updates.isNew;
@@ -205,20 +259,21 @@ export const StoreService = {
     if (updates.colors !== undefined) payload.colors = updates.colors;
     if (updates.models !== undefined) payload.models = updates.models;
     if (updates.variants !== undefined) payload.variants = updates.variants;
-    if (updates.sizeChart !== undefined) payload.size_chart = updates.sizeChart;
     if (updates.weightGrams !== undefined) payload.weight_grams = updates.weightGrams;
     if (updates.heightCm !== undefined) payload.height_cm = updates.heightCm;
     if (updates.widthCm !== undefined) payload.width_cm = updates.widthCm;
     if (updates.lengthCm !== undefined) payload.length_cm = updates.lengthCm;
 
-    const { error } = await supabase.from('products').update(payload).eq('id', id);
+    const { data, error } = await supabase.from('products').update(payload).eq('id', id).select('id');
     assertSaved(error);
+    assertAffected(data);
   },
 
   async deleteProduct(id: string): Promise<void> {
     const supabase = requireSupabase();
-    const { error } = await supabase.from('products').delete().eq('id', id);
+    const { data, error } = await supabase.from('products').delete().eq('id', id).select('id');
     assertSaved(error);
+    assertAffected(data);
   },
 
   async insertBanner(banner: Omit<Banner, 'id'> & { id?: string }): Promise<Banner> {
@@ -238,16 +293,16 @@ export const StoreService = {
 
     const { data, error } = await supabase.from('banners').insert([payload]).select();
     assertSaved(error);
-    return { ...banner, id: String(data?.[0].id) };
+    return { ...banner, id: String(insertedRow(data).id) };
   },
 
   async updateBanner(id: string, updates: Partial<Banner>): Promise<void> {
     const supabase = requireSupabase();
     const payload: Record<string, any> = {};
     if (updates.title !== undefined) payload.title = updates.title;
-    if (updates.subtitle !== undefined) payload.subtitle = updates.subtitle;
+    if ('subtitle' in updates) payload.subtitle = updates.subtitle ?? null;
     if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
-    if (updates.mobileImageUrl !== undefined) payload.mobile_image_url = updates.mobileImageUrl;
+    if ('mobileImageUrl' in updates) payload.mobile_image_url = updates.mobileImageUrl ?? null;
     if (updates.ctaLink !== undefined || updates.linkUrl !== undefined) {
       payload.link_url = updates.ctaLink || updates.linkUrl;
     }
@@ -261,14 +316,16 @@ export const StoreService = {
     if (updates.objectPosition !== undefined) payload.object_position = updates.objectPosition;
     if (updates.mobileObjectPosition !== undefined) payload.mobile_object_position = updates.mobileObjectPosition;
 
-    const { error } = await supabase.from('banners').update(payload).eq('id', id);
+    const { data, error } = await supabase.from('banners').update(payload).eq('id', id).select('id');
     assertSaved(error);
+    assertAffected(data);
   },
 
   async deleteBanner(id: string): Promise<void> {
     const supabase = requireSupabase();
-    const { error } = await supabase.from('banners').delete().eq('id', id);
+    const { data, error } = await supabase.from('banners').delete().eq('id', id).select('id');
     assertSaved(error);
+    assertAffected(data);
   },
 
   async updateOrder(orderId: string, updates: Partial<Order>): Promise<void> {
@@ -284,8 +341,9 @@ export const StoreService = {
     if (updates.shippedAt !== undefined) payload.shipped_at = updates.shippedAt;
     if (updates.stoneTransactionId !== undefined) payload.stone_transaction_id = updates.stoneTransactionId;
 
-    const { error } = await supabase.from('orders').update(payload).eq('id', orderId);
+    const { data, error } = await supabase.from('orders').update(payload).eq('id', orderId).select('id');
     assertSaved(error);
+    assertAffected(data);
   },
 
   async insertCategory(cat: Omit<Category, 'id'> & { id?: string }): Promise<Category> {
@@ -301,7 +359,7 @@ export const StoreService = {
 
     const { data, error } = await supabase.from('categories').insert([payload]).select();
     assertSaved(error);
-    return { ...cat, id: String(data?.[0].id) };
+    return { ...cat, id: String(insertedRow(data).id) };
   },
 
   async updateCategory(id: string, updates: Partial<Category>): Promise<void> {
@@ -309,19 +367,21 @@ export const StoreService = {
     const payload: Record<string, any> = {};
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.slug !== undefined) payload.slug = updates.slug;
-    if (updates.description !== undefined) payload.description = updates.description;
-    if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
+    if ('description' in updates) payload.description = updates.description ?? null;
+    if ('imageUrl' in updates) payload.image_url = updates.imageUrl ?? null;
     if (updates.displayOrder !== undefined) payload.display_order = updates.displayOrder;
     if (updates.isActive !== undefined) payload.is_active = updates.isActive;
 
-    const { error } = await supabase.from('categories').update(payload).eq('id', id);
+    const { data, error } = await supabase.from('categories').update(payload).eq('id', id).select('id');
     assertSaved(error);
+    assertAffected(data);
   },
 
   async deleteCategory(id: string): Promise<void> {
     const supabase = requireSupabase();
-    const { error } = await supabase.from('categories').delete().eq('id', id);
+    const { data, error } = await supabase.from('categories').delete().eq('id', id).select('id');
     assertSaved(error);
+    assertAffected(data);
   },
 
   async insertSubcategory(sub: Omit<Subcategory, 'id'> & { id?: string }): Promise<Subcategory> {
@@ -336,7 +396,7 @@ export const StoreService = {
 
     const { data, error } = await supabase.from('subcategories').insert([payload]).select();
     assertSaved(error);
-    return { ...sub, id: String(data?.[0].id) };
+    return { ...sub, id: String(insertedRow(data).id) };
   },
 
   async updateSubcategory(id: string, updates: Partial<Subcategory>): Promise<void> {
@@ -348,14 +408,16 @@ export const StoreService = {
     if (updates.displayOrder !== undefined) payload.display_order = updates.displayOrder;
     if (updates.isActive !== undefined) payload.is_active = updates.isActive;
 
-    const { error } = await supabase.from('subcategories').update(payload).eq('id', id);
+    const { data, error } = await supabase.from('subcategories').update(payload).eq('id', id).select('id');
     assertSaved(error);
+    assertAffected(data);
   },
 
   async deleteSubcategory(id: string): Promise<void> {
     const supabase = requireSupabase();
-    const { error } = await supabase.from('subcategories').delete().eq('id', id);
+    const { data, error } = await supabase.from('subcategories').delete().eq('id', id).select('id');
     assertSaved(error);
+    assertAffected(data);
   },
 
   async updateSettings(settings: Partial<StoreSettings>): Promise<void> {
@@ -374,6 +436,7 @@ export const StoreService = {
     if (settings.shippingPolicy !== undefined) payload.shipping_policy = settings.shippingPolicy;
     if (settings.returnPolicy !== undefined) payload.return_policy = settings.returnPolicy;
     if (settings.privacyPolicy !== undefined) payload.privacy_policy = settings.privacyPolicy;
+    if ('freeShippingThreshold' in settings) payload.free_shipping_threshold = settings.freeShippingThreshold ?? null;
     const { error } = await supabase.from('store_settings').upsert(payload);
     assertSaved(error);
   }
