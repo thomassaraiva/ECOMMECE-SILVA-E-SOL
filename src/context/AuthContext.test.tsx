@@ -103,4 +103,70 @@ describe('AuthContext', () => {
     await act(async () => { res = await result.current.verifyMfa('000000'); });
     expect(res).toEqual({ success: false, error: 'Código inválido. Confira o aplicativo e tente de novo.' });
   });
+  it('sessão salva com duas etapas (aal2) de um administrador entra direto', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: { user: { email: 'dono@loja.test' } } } });
+    auth.mfa.getAuthenticatorAssuranceLevel.mockResolvedValue({ data: { currentLevel: 'aal2', nextLevel: 'aal2' } });
+    rpc.mockResolvedValue({ data: true, error: null });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+  });
+
+  it('sessão salva só com senha (aal1) não entra', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: { user: { email: 'dono@loja.test' } } } });
+    auth.mfa.getAuthenticatorAssuranceLevel.mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal2' } });
+    rpc.mockResolvedValue({ data: true, error: null });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(auth.mfa.getAuthenticatorAssuranceLevel).toHaveBeenCalled());
+    await act(async () => {});
+    expect(rpc).not.toHaveBeenCalled();
+    expect(result.current.isAuthenticated).toBe(false);
+  });
+
+  it('sair desconecta e limpa o estado', async () => {
+    auth.getSession.mockResolvedValue({ data: { session: { user: { email: 'dono@loja.test' } } } });
+    auth.mfa.getAuthenticatorAssuranceLevel.mockResolvedValue({ data: { currentLevel: 'aal2', nextLevel: 'aal2' } });
+    rpc.mockResolvedValue({ data: true, error: null });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+    await act(async () => { await result.current.logout(); });
+    expect(auth.signOut).toHaveBeenCalled();
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.mfaStep).toBe('none');
+    expect(result.current.mfaEnrollment).toBeNull();
+  });
+
+  it('se o servidor falhar ao sair, limpa a sessão local mesmo assim', async () => {
+    auth.signOut
+      .mockResolvedValueOnce({ error: { message: 'network error' } })
+      .mockResolvedValueOnce({ error: null });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await act(async () => { await result.current.logout(); });
+    expect(auth.signOut).toHaveBeenNthCalledWith(2, { scope: 'local' });
+    expect(result.current.isAuthenticated).toBe(false);
+  });
+
+  it('sair durante o cadastro do aplicativo apaga o QR code e o fator', async () => {
+    auth.mfa.getAuthenticatorAssuranceLevel.mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal1' } });
+    auth.mfa.listFactors.mockResolvedValue({ data: { all: [], totp: [] } });
+    auth.mfa.enroll.mockResolvedValue({ data: { id: 'f1', totp: { qr_code: 'qr', secret: 'ABC' } }, error: null });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await act(async () => { await result.current.login('dono@loja.test', 'certa'); });
+    await act(async () => { await result.current.logout(); });
+    expect(result.current.mfaEnrollment).toBeNull();
+    let res: any;
+    await act(async () => { res = await result.current.verifyMfa('123456'); });
+    expect(res).toEqual({ success: false, error: 'Faça o login de novo.' });
+    expect(auth.mfa.challengeAndVerify).not.toHaveBeenCalled();
+  });
+
+  it('erro ao listar os fatores devolve mensagem e não cadastra outro aplicativo', async () => {
+    auth.mfa.getAuthenticatorAssuranceLevel.mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal2' } });
+    auth.mfa.listFactors.mockResolvedValue({ data: null, error: { message: 'timeout' } });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    let res: any;
+    await act(async () => { res = await result.current.login('dono@loja.test', 'certa'); });
+    expect(res).toEqual({ success: false, error: 'Não foi possível verificar sua conta. Tente de novo.' });
+    expect(auth.mfa.enroll).not.toHaveBeenCalled();
+    expect(auth.mfa.unenroll).not.toHaveBeenCalled();
+  });
 });

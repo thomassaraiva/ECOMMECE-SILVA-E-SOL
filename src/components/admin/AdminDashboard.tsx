@@ -46,7 +46,7 @@ export type AdminTab =
 
 export const AdminDashboard: React.FC = () => {
   const { adminUser, logout } = useAuth();
-  const { setCurrentPage, products, orders, adminError, clearAdminError, loadOrders } = useStore();
+  const { setCurrentPage, products, orders, adminError, clearAdminError, loadOrders, clearAdminData } = useStore();
 
   // Carrega os pedidos ao abrir o painel para os contadores e a Visão Geral; o erro já aparece na faixa global.
   useEffect(() => { loadOrders().catch(() => {}); }, []);
@@ -134,7 +134,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           <button
-            onClick={async () => { await logout(); setCurrentPage('home'); }}
+            onClick={async () => { await logout(); clearAdminData(); setCurrentPage('home'); }}
             className="p-2 sm:px-3 sm:py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/60 text-red-300 hover:text-red-100 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
             title="Sair do painel administrativo"
           >

@@ -121,6 +121,24 @@ describe('StoreService', () => {
     expect(recorded.update).toMatchObject({ sku: 'SS-1', brand: 'Silva e Sol', seo_title: 'Sunga', promotional_price: null });
   });
 
+  it('updateBanner grava link e texto do botão vazios quando enviados', async () => {
+    const recorded: any = {};
+    vi.mocked(getSupabase).mockReturnValue(
+      fakeClient({ banners: { data: [{ id: 'b1' }], error: null } }, undefined, recorded) as any
+    );
+    await StoreService.updateBanner('b1', { ctaLink: '', ctaText: '' });
+    expect(recorded.update).toMatchObject({ link_url: '', button_text: '' });
+  });
+
+  it('updateBanner usa o padrão quando o campo vem sem valor e não mexe no que não veio', async () => {
+    const recorded: any = {};
+    vi.mocked(getSupabase).mockReturnValue(
+      fakeClient({ banners: { data: [{ id: 'b1' }], error: null } }, undefined, recorded) as any
+    );
+    await StoreService.updateBanner('b1', { linkUrl: undefined, title: 'Verão' });
+    expect(recorded.update).toEqual({ title: 'Verão', link_url: 'sungas' });
+  });
+
   it('updateSettings grava na linha única id 1', async () => {
     const recorded: any = {};
     vi.mocked(getSupabase).mockReturnValue(fakeClient({}, undefined, recorded) as any);

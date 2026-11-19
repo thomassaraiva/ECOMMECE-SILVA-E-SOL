@@ -303,11 +303,12 @@ export const StoreService = {
     if ('subtitle' in updates) payload.subtitle = updates.subtitle ?? null;
     if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
     if ('mobileImageUrl' in updates) payload.mobile_image_url = updates.mobileImageUrl ?? null;
-    if (updates.ctaLink !== undefined || updates.linkUrl !== undefined) {
-      payload.link_url = updates.ctaLink || updates.linkUrl;
+    // Colunas obrigatórias: sem valor, volta ao padrão de insertBanner
+    if ('ctaLink' in updates || 'linkUrl' in updates) {
+      payload.link_url = updates.ctaLink ?? updates.linkUrl ?? 'sungas';
     }
-    if (updates.ctaText !== undefined || updates.buttonText !== undefined) {
-      payload.button_text = updates.ctaText || updates.buttonText;
+    if ('ctaText' in updates || 'buttonText' in updates) {
+      payload.button_text = updates.ctaText ?? updates.buttonText ?? 'Ver Coleção';
     }
     if (updates.displayOrder !== undefined || updates.order !== undefined) {
       payload.display_order = updates.displayOrder ?? updates.order;

@@ -30,6 +30,7 @@ interface StoreContextType {
   adminError: string | null;
   clearAdminError: () => void;
   loadOrders: () => Promise<void>;
+  clearAdminData: () => void;
   
   // Navegação
   currentPage: PageRoute;
@@ -170,6 +171,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const orders = await StoreService.fetchOrders();
     setStoreState(prev => ({ ...prev, orders }));
   });
+
+  // Ao sair do painel, tira da memória o que só o administrador pode ver
+  const clearAdminData = () => setStoreState(prev => ({ ...prev, orders: [] }));
 
   const navigateToProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -550,7 +554,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         reload,
         adminError,
         clearAdminError,
-        loadOrders
+        loadOrders,
+        clearAdminData
       }}
     >
       {children}

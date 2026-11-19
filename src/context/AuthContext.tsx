@@ -24,6 +24,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const supabase = getSupabase();
 
+  const resetState = () => {
+    setAdminUser(null);
+    setMfaStep('none');
+    setFactorId(null);
+    setMfaEnrollment(null);
+  };
+
   const confirmAdmin = async (email: string): Promise<boolean> => {
     if (!supabase) return false;
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -40,10 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user?.email) await confirmAdmin(session.user.email);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        setAdminUser(null);
-        setMfaStep('none');
-      }
+      if (event === 'SIGNED_OUT') resetState();
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -60,10 +64,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (aal?.currentLevel === 'aal2') {
       if (await confirmAdmin(cleanEmail)) return { success: true };
       await supabase.auth.signOut();
+      resetState();
       return { success: false, error: 'Esta conta não tem acesso ao painel.' };
     }
 
-    const { data: factors } = await supabase.auth.mfa.listFactors();
+    const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+    if (factorsError) return { success: false, error: 'Não foi possível verificar sua conta. Tente de novo.' };
     const verified = factors?.totp?.find((f: any) => f.status === 'verified');
     if (verified) {
       setFactorId(verified.id);
@@ -99,15 +105,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     }
     await supabase.auth.signOut();
-    setMfaStep('none');
+    resetState();
     return { success: false, error: 'Esta conta não tem acesso ao painel.' };
   };
 
   const logout = async () => {
-    await supabase?.auth.signOut();
-    setAdminUser(null);
-    setMfaStep('none');
-    setMfaEnrollment(null);
+    if (supabase) {
+      const { error } = await supabase.auth.signOut();
+      // Sem resposta do servidor, ao menos apaga a sessão guardada neste navegador
+      if (error) await supabase.auth.signOut({ scope: 'local' });
+    }
+    resetState();
   };
 
   return (

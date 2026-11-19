@@ -17,12 +17,11 @@ export const AdminSettingsTab: React.FC = () => {
   const [whatsappNumber, setWhatsappNumber] = useState(settings.whatsappNumber || '5581920019982');
   const [contactEmail, setContactEmail] = useState(settings.contactEmail || 'contato@silvaesol.com.br');
   const [instagramHandle, setInstagramHandle] = useState(settings.instagramHandle || '@silvaesol');
-  const [freeShippingThreshold, setFreeShippingThreshold] = useState(settings.freeShippingThreshold || 249.90);
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number | ''>(settings.freeShippingThreshold ?? '');
   const [exchangePolicy, setExchangePolicy] = useState(settings.exchangePolicy || '');
   const [shippingInfo, setShippingInfo] = useState(settings.shippingInfo || '');
   const [privacyPolicy, setPrivacyPolicy] = useState(
-    settings.privacyPolicy || 
-    'Seus dados de navegação e compras são protegidos e tratados sob estritas normas de sigilo e LGPD.'
+    settings.privacyPolicy || ''
   );
 
   const [legalName, setLegalName] = useState(settings.legalName || '');
@@ -43,7 +42,7 @@ export const AdminSettingsTab: React.FC = () => {
         whatsappNumber: whatsappNumber.trim().replace(/\D/g, ''),
         contactEmail: contactEmail.trim(),
         instagramHandle: instagramHandle.trim(),
-        freeShippingThreshold: Number(freeShippingThreshold),
+        freeShippingThreshold: freeShippingThreshold === '' ? undefined : Number(freeShippingThreshold),
         exchangePolicy: exchangePolicy.trim(),
         shippingInfo: shippingInfo.trim(),
         privacyPolicy: privacyPolicy.trim(),
