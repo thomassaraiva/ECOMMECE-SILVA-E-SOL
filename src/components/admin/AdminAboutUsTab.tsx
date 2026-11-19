@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import { 
-  Sparkles, 
-  Check, 
-  Image as ImageIcon, 
-  Upload, 
-  Eye, 
-  Database,
+import {
+  Check,
   ExternalLink
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';

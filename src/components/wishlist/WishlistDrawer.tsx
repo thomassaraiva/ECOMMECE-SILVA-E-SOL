@@ -4,6 +4,8 @@ import { useWishlist } from '../../context/WishlistContext';
 import { useCart } from '../../context/CartContext';
 import { useStore } from '../../context/StoreContext';
 import { PRODUCT_IMAGE_FALLBACK } from '../../lib/placeholders';
+import { formatBRL } from '../../lib/format';
+import { effectivePrice } from '../../lib/pricing';
 
 export const WishlistDrawer: React.FC = () => {
   const { wishlist, removeFromWishlist, clearWishlist, isWishlistOpen, setIsWishlistOpen } = useWishlist();
@@ -74,8 +76,8 @@ export const WishlistDrawer: React.FC = () => {
               </div>
             ) : (
               wishlist.map((item) => {
-                const hasDiscount = item.isOnSale && item.promotionalPrice && item.promotionalPrice < item.price;
-                const effectivePrice = hasDiscount ? item.promotionalPrice! : item.price;
+                const unitPrice = item.isOnSale ? effectivePrice(item) : item.price;
+                const hasDiscount = unitPrice < item.price;
 
                 return (
                   <div
@@ -114,11 +116,11 @@ export const WishlistDrawer: React.FC = () => {
 
                       <div className="flex items-baseline gap-2 mt-1">
                         <span className="font-bold text-sm text-[#2A8882]">
-                          R$ {effectivePrice.toFixed(2).replace('.', ',')}
+                          {formatBRL(unitPrice)}
                         </span>
                         {hasDiscount && (
                           <span className="text-[11px] text-[#9E9484] line-through">
-                            R$ {item.price.toFixed(2).replace('.', ',')}
+                            {formatBRL(item.price)}
                           </span>
                         )}
                       </div>

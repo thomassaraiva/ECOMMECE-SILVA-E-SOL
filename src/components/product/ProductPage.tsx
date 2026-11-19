@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
-import { 
-  ShoppingBag, 
-  MessageCircle, 
-  ArrowLeft, 
-  Check, 
-  Percent, 
-  Heart, 
-  Share2, 
+import {
+  ShoppingBag,
+  MessageCircle,
+  ArrowLeft,
+  Check,
+  Percent,
+  Heart,
+  Share2,
   AlertCircle,
   Ruler,
-  Play,
-  Film
+  Play
 } from 'lucide-react';
 import { Product } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { SizeChartModal } from './SizeChartModal';
-import { trackViewContent, trackAddToWishlist, trackContactWhatsApp } from '../../lib/analytics';
+import { trackViewContent, trackContactWhatsApp } from '../../lib/analytics';
+import { formatBRL } from '../../lib/format';
+import { effectivePrice } from '../../lib/pricing';
 
 interface ProductPageProps {
   product: Product;
@@ -154,14 +155,13 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
 
   const effectiveStock = matchedVariant ? matchedVariant.stockQuantity : product.stockQuantity;
 
-  const discountPercent = product.promotionalPrice && product.price > product.promotionalPrice
-    ? Math.round(((product.price - product.promotionalPrice) / product.price) * 100)
+  const promoPrice = product.isOnSale ? effectivePrice(product) : product.price;
+  const discountPercent = promoPrice < product.price
+    ? Math.round(((product.price - promoPrice) / product.price) * 100)
     : 0;
 
   const basePrice = matchedVariant?.price || product.price;
-  const currentPrice = product.promotionalPrice && product.isOnSale
-    ? product.promotionalPrice
-    : basePrice;
+  const currentPrice = promoPrice < product.price ? promoPrice : basePrice;
 
   const category = categories.find(c => c.id === product.categoryId);
 
@@ -375,16 +375,16 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
             <div className="p-4 rounded-2xl bg-white border border-[#E8DEC8] shadow-xs space-y-1">
               <div className="flex items-baseline gap-3">
                 <span className="font-heading font-bold text-2xl sm:text-3xl text-[#2A8882]">
-                  R$ {currentPrice.toFixed(2).replace('.', ',')}
+                  {formatBRL(currentPrice)}
                 </span>
-                {product.promotionalPrice && product.isOnSale && (
+                {promoPrice < product.price && (
                   <span className="text-sm text-[#9E9484] line-through">
-                    R$ {product.price.toFixed(2).replace('.', ',')}
+                    {formatBRL(product.price)}
                   </span>
                 )}
               </div>
               <p className="text-xs text-[#736A5E]">
-                Em até 3x de R$ {(currentPrice / 3).toFixed(2).replace('.', ',')} sem juros no cartão ou via Pix
+                Em até 3x de {formatBRL(currentPrice / 3)} sem juros no cartão ou via Pix
               </p>
             </div>
 

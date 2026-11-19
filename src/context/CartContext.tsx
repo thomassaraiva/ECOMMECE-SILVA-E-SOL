@@ -3,6 +3,7 @@ import { CartItem, Product, StoreSettings } from '../types/ecommerce';
 import { buildWhatsAppOrderUrl } from '../lib/whatsappOrder';
 import { trackAddToCart, trackInitiateCheckout } from '../lib/analytics';
 import { PRODUCT_IMAGE_FALLBACK } from '../lib/placeholders';
+import { effectivePrice } from '../lib/pricing';
 
 interface CartContextType {
   cart: CartItem[];
@@ -70,7 +71,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           productId: product.id,
           name: product.name,
           price: product.price,
-          promotionalPrice: product.promotionalPrice,
+          // Só leva a promoção que a vitrine mostra (produto marcado em oferta)
+          promotionalPrice: product.isOnSale ? product.promotionalPrice : undefined,
           selectedSize: s,
           selectedColor: c,
           selectedModel: m,
@@ -118,12 +120,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  const subtotal = cart.reduce((acc, item) => {
-    const unitPrice = item.promotionalPrice && item.promotionalPrice < item.price 
-      ? item.promotionalPrice 
-      : item.price;
-    return acc + unitPrice * item.quantity;
-  }, 0);
+  const subtotal = cart.reduce((acc, item) => acc + effectivePrice(item) * item.quantity, 0);
 
   const checkoutWhatsApp = (
     settings: StoreSettings, 

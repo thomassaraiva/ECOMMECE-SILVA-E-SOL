@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, RefreshCw, Truck, Lock, ArrowLeft } from 'lucide-react';
+import { RefreshCw, Truck, Lock, ArrowLeft } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
 export const PoliciesPage: React.FC = () => {

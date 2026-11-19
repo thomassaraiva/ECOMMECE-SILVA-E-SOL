@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  Settings, 
-  Check, 
-  MessageCircle, 
-  Instagram, 
-  Mail, 
-  Truck, 
-  ShieldCheck, 
-  Sparkles,
-  DollarSign
+import {
+  Check,
+  MessageCircle,
+  Instagram,
+  Mail,
+  Truck,
+  Sparkles
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
@@ -223,7 +220,7 @@ export const AdminSettingsTab: React.FC = () => {
                 type="number"
                 step="0.01"
                 value={freeShippingThreshold}
-                onChange={(e) => setFreeShippingThreshold(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setFreeShippingThreshold(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
                 className="flex-1 px-3 py-2 text-white font-bold text-sm bg-transparent focus:outline-none"
               />
             </div>

@@ -28,6 +28,17 @@ describe('buildWhatsAppOrderUrl', () => {
     expect(text).toContain('Frete: a combinar');
   });
 
+  it('promoção zerada ou maior que o preço não muda o valor cobrado', () => {
+    const odd = [
+      { id: 'c', productId: 'p3', name: 'Boné', price: 59.9, promotionalPrice: 0, quantity: 1, image: '', maxStock: 5 },
+      { id: 'd', productId: 'p4', name: 'Viseira', price: 49.9, promotionalPrice: 69.9, quantity: 1, image: '', maxStock: 5 },
+    ] as any;
+    const t = decodeURIComponent(new URL(buildWhatsAppOrderUrl(odd, settings, { orderNumber: 'X' })).searchParams.get('text') || '');
+    expect(t).toContain('1 un. x R$ 59,90 = R$ 59,90');
+    expect(t).toContain('1 un. x R$ 49,90 = R$ 49,90');
+    expect(t).toContain('Subtotal: R$ 109,80');
+  });
+
   it('carrinho vazio não gera link', () => {
     expect(buildWhatsAppOrderUrl([], settings)).toBe('');
   });

@@ -1,20 +1,16 @@
 import React, { useState } from 'react';
-import { 
-  Package, 
-  AlertTriangle, 
-  Check, 
-  Search, 
-  Filter, 
-  ChevronDown, 
-  ChevronUp, 
-  Plus, 
-  Minus,
-  CheckCircle2,
-  XCircle,
-  Sparkles
+import {
+  Package,
+  AlertTriangle,
+  Check,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  XCircle
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { Product, ProductVariant } from '../../types/ecommerce';
+import { Product } from '../../types/ecommerce';
+import { formatBRL } from '../../lib/format';
 
 export const AdminStockTab: React.FC = () => {
   const { products, updateProduct } = useStore();
@@ -213,7 +209,7 @@ export const AdminStockTab: React.FC = () => {
                     <div className="min-w-0">
                       <h4 className="font-bold text-white text-xs sm:text-sm truncate">{prod.name}</h4>
                       <p className="text-[11px] text-stone-400 font-mono mt-0.5">
-                        {prod.sku ? `SKU: ${prod.sku}` : 'Sem SKU'} &bull; R$ {prod.price.toFixed(2).replace('.', ',')}
+                        {prod.sku ? `SKU: ${prod.sku}` : 'Sem SKU'} &bull; {formatBRL(prod.price)}
                       </p>
                       {hasVariants && (
                         <button

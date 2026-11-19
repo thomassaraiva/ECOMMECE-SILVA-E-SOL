@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useStore } from '../../context/StoreContext';
+import { formatBRL } from '../../lib/format';
+import { effectivePrice } from '../../lib/pricing';
 
 export const CartDrawer: React.FC = () => {
   const { 
@@ -88,7 +90,7 @@ export const CartDrawer: React.FC = () => {
               ) : (
                 <>
                   {cart.map((item) => {
-                    const effectivePrice = item.promotionalPrice || item.price;
+                    const unitPrice = effectivePrice(item);
                     return (
                       <div key={item.id} className="py-3.5 flex gap-3 group">
                         <img
@@ -156,11 +158,11 @@ export const CartDrawer: React.FC = () => {
 
                             <div className="text-right">
                               <span className="text-xs font-bold text-[#2A8882]">
-                                R$ {(effectivePrice * item.quantity).toFixed(2).replace('.', ',')}
+                                {formatBRL(unitPrice * item.quantity)}
                               </span>
                               {item.quantity > 1 && (
                                 <span className="block text-[10px] text-[#9E9484]">
-                                  (R$ {effectivePrice.toFixed(2).replace('.', ',')} un.)
+                                  ({formatBRL(unitPrice)} un.)
                                 </span>
                               )}
                             </div>
@@ -183,7 +185,7 @@ export const CartDrawer: React.FC = () => {
                   <div className="flex justify-between">
                     <span className="text-[#736A5E]">Subtotal:</span>
                     <span className="font-semibold text-[#2D2823]">
-                      R$ {subtotal.toFixed(2).replace('.', ',')}
+                      {formatBRL(subtotal)}
                     </span>
                   </div>
 
@@ -195,7 +197,7 @@ export const CartDrawer: React.FC = () => {
                   <div className="flex justify-between items-center text-sm font-bold text-[#2D2823] pt-1.5 border-t border-[#E6DDD0]">
                     <span>Total da Compra:</span>
                     <span className="text-lg text-[#2A8882] font-heading font-extrabold">
-                      R$ {subtotal.toFixed(2).replace('.', ',')}
+                      {formatBRL(subtotal)}
                     </span>
                   </div>
                 </div>

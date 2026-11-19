@@ -1,7 +1,6 @@
 import React from 'react';
 import { Sun, Waves, ShieldCheck, Feather, ArrowRight, MessageCircle } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { Logo } from '../common/Logo';
 
 export const BrandStory: React.FC = () => {
   const { setCurrentPage, settings } = useStore();

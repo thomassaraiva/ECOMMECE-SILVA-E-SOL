@@ -1,16 +1,14 @@
 import React from 'react';
-import { 
-  Package, 
-  Layers, 
-  Image as ImageIcon, 
-  Tag, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Plus, 
-  ExternalLink, 
-  TrendingUp, 
+import {
+  Package,
+  Layers,
+  Image as ImageIcon,
+  Tag,
+  AlertTriangle,
+  Plus,
+  ExternalLink,
+  TrendingUp,
   ShoppingBag,
-  Clock,
   Sparkles
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';

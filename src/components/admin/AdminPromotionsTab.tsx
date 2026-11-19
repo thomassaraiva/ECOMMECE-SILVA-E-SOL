@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  Tag, 
-  Percent, 
-  Calendar, 
-  Check, 
-  AlertCircle, 
-  Search, 
-  ArrowRight, 
-  Sparkles,
-  Zap,
-  Filter
+import {
+  Percent,
+  Check,
+  AlertCircle,
+  Search,
+  Zap
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { validatePromotion } from '../../lib/productValidation';
 import { Product } from '../../types/ecommerce';
+import { formatBRL } from '../../lib/format';
 
 export const AdminPromotionsTab: React.FC = () => {
   const { products, categories, updateProduct } = useStore();
@@ -32,7 +28,6 @@ export const AdminPromotionsTab: React.FC = () => {
   };
 
   const promoProducts = products.filter(p => p.isOnSale);
-  const regularProducts = products.filter(p => !p.isOnSale);
 
   const filteredProducts = products.filter(p => {
     if (selectedCat !== 'all' && p.categoryId !== selectedCat) return false;
@@ -57,7 +52,7 @@ export const AdminPromotionsTab: React.FC = () => {
         isOnSale: true,
         promotionalPrice: promoPrice
       });
-      triggerSuccess(`Desconto de ${percent}% aplicado em "${product.name}". Preço: R$ ${promoPrice.toFixed(2).replace('.', ',')}`);
+      triggerSuccess(`Desconto de ${percent}% aplicado em "${product.name}". Preço: ${formatBRL(promoPrice)}`);
     } catch {
       // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
     }
@@ -256,14 +251,14 @@ export const AdminPromotionsTab: React.FC = () => {
 
                   {/* Preço Base */}
                   <td className="py-3 px-3 font-semibold text-stone-300">
-                    R$ {prod.price.toFixed(2).replace('.', ',')}
+                    {formatBRL(prod.price)}
                   </td>
 
                   {/* Preço Promo */}
                   <td className="py-3 px-3">
                     {prod.isOnSale && prod.promotionalPrice ? (
                       <span className="text-[#F4803E] font-bold">
-                        R$ {prod.promotionalPrice.toFixed(2).replace('.', ',')}
+                        {formatBRL(prod.promotionalPrice)}
                       </span>
                     ) : (
                       <span className="text-stone-600">-</span>

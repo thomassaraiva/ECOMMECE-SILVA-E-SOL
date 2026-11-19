@@ -5,6 +5,8 @@ import { useStore } from '../../context/StoreContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { PRODUCT_IMAGE_FALLBACK } from '../../lib/placeholders';
+import { formatBRL } from '../../lib/format';
+import { effectivePrice } from '../../lib/pricing';
 
 interface ProductCardProps {
   product: Product;
@@ -18,8 +20,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const isFavorite = isInWishlist(product.id);
 
-  const discountPercent = product.promotionalPrice && product.price > product.promotionalPrice
-    ? Math.round(((product.price - product.promotionalPrice) / product.price) * 100)
+  const shownPrice = product.isOnSale ? effectivePrice(product) : product.price;
+  const discountPercent = shownPrice < product.price
+    ? Math.round(((product.price - shownPrice) / product.price) * 100)
     : 0;
 
   const handleQuickAdd = (e: React.MouseEvent) => {
@@ -188,24 +191,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Bloco de Preço */}
         <div className="mt-3 pt-2.5 border-t border-[#EDE4D6]">
           <div className="flex items-baseline gap-2">
-            {product.promotionalPrice && product.isOnSale ? (
+            {shownPrice < product.price ? (
               <>
                 <span className="font-heading font-bold text-base sm:text-lg text-[#2A8882]">
-                  R$ {product.promotionalPrice.toFixed(2).replace('.', ',')}
+                  {formatBRL(shownPrice)}
                 </span>
                 <span className="text-xs text-[#9E9484] line-through">
-                  R$ {product.price.toFixed(2).replace('.', ',')}
+                  {formatBRL(product.price)}
                 </span>
               </>
             ) : (
               <span className="font-heading font-bold text-base sm:text-lg text-[#2D2823]">
-                R$ {product.price.toFixed(2).replace('.', ',')}
+                {formatBRL(product.price)}
               </span>
             )}
           </div>
 
           <p className="text-[11px] text-[#8A8072] mt-0.5">
-            em até 3x de R$ {((product.promotionalPrice || product.price) / 3).toFixed(2).replace('.', ',')} sem juros
+            em até 3x de {formatBRL(shownPrice / 3)} sem juros
           </p>
 
           {/* Botão Mobile de Adição Rápida */}

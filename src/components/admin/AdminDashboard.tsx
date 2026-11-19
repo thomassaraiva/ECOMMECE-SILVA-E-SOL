@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Package, 
-  Layers, 
-  Image as ImageIcon, 
-  Tag, 
-  Settings, 
-  ShoppingBag, 
-  LogOut, 
+import {
+  Package,
+  Layers,
+  Image as ImageIcon,
+  Tag,
+  Settings,
+  ShoppingBag,
+  LogOut,
   ExternalLink,
   BarChart3,
   Archive,
   Info,
   Menu,
   X,
-  Sparkles,
   Sun,
   Target
 } from 'lucide-react';

@@ -1,6 +1,6 @@
 import { CartItem, StoreSettings } from '../types/ecommerce';
-
-const brl = (value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`;
+import { formatBRL as brl } from './format';
+import { effectivePrice } from './pricing';
 
 export function buildWhatsAppOrderUrl(
   cart: CartItem[],
@@ -17,7 +17,7 @@ export function buildWhatsAppOrderUrl(
 
   let subtotal = 0;
   cart.forEach((item, i) => {
-    const unit = item.promotionalPrice ?? item.price;
+    const unit = effectivePrice(item);
     const total = unit * item.quantity;
     subtotal += total;
     const details = [

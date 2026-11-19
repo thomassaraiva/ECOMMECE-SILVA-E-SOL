@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, Instagram, Mail, MapPin, Send, CheckCircle, Clock } from 'lucide-react';
+import { MessageCircle, Instagram, Mail, Send, CheckCircle, Clock } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
 export const ContactPage: React.FC = () => {

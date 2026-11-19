@@ -1,19 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Layers, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  EyeOff, 
-  Upload, 
-  Check, 
-  X, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Upload,
+  Check,
+  X,
   FolderPlus,
   Image as ImageIcon
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { Category, Subcategory } from '../../types/ecommerce';
+import { Category } from '../../types/ecommerce';
 
 export const AdminCategoriesTab: React.FC = () => {
   const { 

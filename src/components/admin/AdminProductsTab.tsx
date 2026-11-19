@@ -1,24 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Copy, 
-  Trash2, 
-  Check, 
-  X, 
-  Percent, 
-  AlertCircle,
+import {
+  Package,
+  Plus,
+  Search,
+  Edit,
+  Copy,
+  Trash2,
+  Check,
+  X,
   Eye,
   EyeOff,
-  Sparkles,
-  ExternalLink,
-  ChevronDown
+  ExternalLink
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Product } from '../../types/ecommerce';
+import { formatBRL } from '../../lib/format';
 
 interface AdminProductsTabProps {
   onOpenNewProduct: () => void;
@@ -324,15 +320,15 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           {product.isOnSale && product.promotionalPrice ? (
                             <div>
                               <span className="text-emerald-400 font-bold block">
-                                R$ {product.promotionalPrice.toFixed(2).replace('.', ',')}
+                                {formatBRL(product.promotionalPrice)}
                               </span>
                               <span className="text-stone-500 line-through text-[11px]">
-                                R$ {product.price.toFixed(2).replace('.', ',')}
+                                {formatBRL(product.price)}
                               </span>
                             </div>
                           ) : (
                             <span className="text-white font-semibold">
-                              R$ {product.price.toFixed(2).replace('.', ',')}
+                              {formatBRL(product.price)}
                             </span>
                           )}
                         </div>

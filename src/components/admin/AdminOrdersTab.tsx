@@ -1,24 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  ShoppingBag, 
-  Search, 
-  Filter, 
-  MessageCircle, 
-  CheckCircle, 
-  Clock, 
-  Truck, 
-  Check, 
-  X, 
+import {
+  ShoppingBag,
+  Search,
+  MessageCircle,
+  CheckCircle,
+  Truck,
+  Check,
+  X,
   ExternalLink,
   ChevronDown,
-  User,
-  MapPin,
   Calendar,
   Mail,
   Copy,
   Send,
   RefreshCw,
-  Radio,
   Info,
   ShieldCheck,
   Code
@@ -26,6 +21,7 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { Order, OrderStatus } from '../../types/ecommerce';
 import { processMelhorEnvioWebhook } from '../../lib/melhorEnvioWebhook';
+import { formatBRL } from '../../lib/format';
 
 const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; border: string }> = {
   pending_whatsapp: { label: 'Pendente WhatsApp', color: 'bg-amber-950/80 text-amber-400', border: 'border-amber-800' },
@@ -350,7 +346,7 @@ export const AdminOrdersTab: React.FC = () => {
                       <span>{order.items.length} item(ns)</span>
                       <span>&bull;</span>
                       <span className="text-emerald-400 font-extrabold text-sm">
-                        Total: R$ {order.total.toFixed(2).replace('.', ',')}
+                        Total: {formatBRL(order.total)}
                       </span>
                       {order.customerEmail && (
                         <>
@@ -437,8 +433,8 @@ export const AdminOrdersTab: React.FC = () => {
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-stone-300 font-semibold">{item.quantity}x R$ {item.unitPrice.toFixed(2).replace('.', ',')}</p>
-                              <p className="text-emerald-400 font-bold">R$ {(item.quantity * item.unitPrice).toFixed(2).replace('.', ',')}</p>
+                              <p className="text-stone-300 font-semibold">{item.quantity}x {formatBRL(item.unitPrice)}</p>
+                              <p className="text-emerald-400 font-bold">{formatBRL(item.quantity * item.unitPrice)}</p>
                             </div>
                           </div>
                         ))}
@@ -528,7 +524,7 @@ export const AdminOrdersTab: React.FC = () => {
                     #{selectedOrderForSimulation?.orderNumber || selectedOrderForSimulation?.id.slice(-6).toUpperCase()} - {selectedOrderForSimulation?.customerName}
                   </span>
                   <span className="text-stone-400 text-[11px]">
-                    Total: R$ {selectedOrderForSimulation?.total.toFixed(2).replace('.', ',')} • Status atual: {selectedOrderForSimulation?.status}
+                    Total: {formatBRL(selectedOrderForSimulation?.total ?? 0)} • Status atual: {selectedOrderForSimulation?.status}
                   </span>
                 </div>
               </div>

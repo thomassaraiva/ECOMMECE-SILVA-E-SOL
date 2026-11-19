@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Waves, Sparkles, Heart, Compass, ArrowRight } from 'lucide-react';
+import { Sun, Waves, Sparkles, Compass, ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
 export const AboutPage: React.FC = () => {

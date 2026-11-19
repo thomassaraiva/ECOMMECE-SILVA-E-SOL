@@ -1,25 +1,20 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Image as ImageIcon, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  EyeOff, 
-  ExternalLink, 
-  Check, 
-  X, 
-  Smartphone, 
+import {
+  Image as ImageIcon,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  Check,
+  X,
+  Smartphone,
   Monitor,
-  Database,
   Upload,
   Zap,
-  Sparkles,
   RefreshCw,
   Sliders,
   ArrowRight,
-  Info,
-  Layers,
   ArrowUp,
   ArrowDown,
   Maximize2,
@@ -31,7 +26,7 @@ import { formatBytes, optimizeBannerImage } from '../../lib/imageOptimizer';
 import { uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
 
 export const AdminBannersTab: React.FC = () => {
-  const { banners, categories, products, addBanner, updateBanner, deleteBanner, toggleBannerStatus } = useStore();
+  const { banners, addBanner, updateBanner, deleteBanner, toggleBannerStatus } = useStore();
 
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);

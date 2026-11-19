@@ -10,6 +10,10 @@ import {
   CatalogFilters 
 } from '../types/ecommerce';
 import { StoreService, StoreState, EMPTY_STORE_STATE } from '../lib/storage';
+import { effectivePrice } from '../lib/pricing';
+
+// Preço que a vitrine mostra: promoção só vale com o produto marcado em oferta
+const shownPrice = (p: Product) => (p.isOnSale ? effectivePrice(p) : p.price);
 import { initializeAnalytics, trackPageView, trackViewContent, trackSearch } from '../lib/analytics';
 
 interface StoreContextType {
@@ -463,15 +467,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Filtro por Preço Mínimo e Máximo
     if (filters.minPrice !== undefined) {
-      result = result.filter(p => (p.promotionalPrice || p.price) >= filters.minPrice!);
+      result = result.filter(p => shownPrice(p) >= filters.minPrice!);
     }
     if (filters.maxPrice !== undefined) {
-      result = result.filter(p => (p.promotionalPrice || p.price) <= filters.maxPrice!);
+      result = result.filter(p => shownPrice(p) <= filters.maxPrice!);
     }
 
     // Filtro de Promoções
     if (filters.onlyPromotions) {
-      result = result.filter(p => p.isOnSale && p.promotionalPrice && p.promotionalPrice < p.price);
+      result = result.filter(p => shownPrice(p) < p.price);
     }
 
     // Ordenação
@@ -480,10 +484,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         break;
       case 'price-asc':
-        result.sort((a, b) => (a.promotionalPrice || a.price) - (b.promotionalPrice || b.price));
+        result.sort((a, b) => shownPrice(a) - shownPrice(b));
         break;
       case 'price-desc':
-        result.sort((a, b) => (b.promotionalPrice || b.price) - (a.promotionalPrice || a.price));
+        result.sort((a, b) => shownPrice(b) - shownPrice(a));
         break;
       case 'name':
         result.sort((a, b) => a.name.localeCompare(b.name));

@@ -1,26 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  X, 
-  Check, 
-  Upload, 
-  Plus, 
-  Trash2, 
-  Star, 
-  ArrowLeft, 
-  ArrowRight, 
-  Play, 
-  Film, 
-  Layers, 
-  Tag, 
-  Ruler, 
-  Globe, 
-  Percent, 
+import {
+  X,
+  Check,
+  Upload,
+  Plus,
+  Trash2,
+  Star,
+  ArrowLeft,
+  ArrowRight,
+  Play,
+  Film,
+  Layers,
+  Tag,
+  Ruler,
+  Percent,
   AlertCircle,
   Database,
-  Sparkles,
   RefreshCw,
   Camera,
-  Image as ImageIcon,
   Smartphone,
   Laptop,
   Loader2,
@@ -31,11 +28,11 @@ import {
   Box,
   Scale
 } from 'lucide-react';
-import { Product, Category, Subcategory, SizeChart, SizeChartRow, ProductVariant } from '../../types/ecommerce';
+import { Product, SizeChart, SizeChartRow, ProductVariant } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
-import { getDefaultSizeChartForCategory, SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
+import { SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
 import { validatePromotion } from '../../lib/productValidation';
-import { optimizeProductVariantImage, formatBytes } from '../../lib/imageOptimizer';
+import { optimizeProductVariantImage } from '../../lib/imageOptimizer';
 import { uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
 
 interface AdminProductModalProps {
