@@ -31,7 +31,7 @@ import {
 import { Product, SizeChart, SizeChartRow, ProductVariant } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
 import { SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
-import { validatePromotion } from '../../lib/productValidation';
+import { validatePromotion, priceFieldForError } from '../../lib/productValidation';
 import { uploadProductImage, PRODUCT_UPLOAD_ERROR } from '../../lib/productImageUpload';
 
 interface AdminProductModalProps {
@@ -52,6 +52,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [activeTab, setActiveTab] = useState<ModalTab>('general');
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const invalidPriceField = priceFieldForError(errorMsg);
 
   // Criação rápida de categoria inline
   const [showQuickCategoryModal, setShowQuickCategoryModal] = useState(false);
@@ -632,13 +633,6 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
 
         {/* Corpo do Formulário */}
         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
-          {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
           {/* ABA 1: GERAL & PREÇO */}
           {activeTab === 'general' && (
             <div className="space-y-6">
@@ -800,29 +794,35 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs text-stone-400 mb-1 font-medium">Preço Normal (R$)</label>
+                    <label htmlFor="product-price" className="block text-xs text-stone-400 mb-1 font-medium">Preço Normal (R$)</label>
                     <input
+                      id="product-price"
+                      aria-invalid={invalidPriceField === 'price' || undefined}
+                      aria-describedby={invalidPriceField === 'price' ? 'product-error-msg' : undefined}
                       type="number"
                       step="0.01"
                       required
                       value={price}
                       onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-                      className="w-full px-3.5 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white text-sm font-bold focus:outline-none focus:border-[#2A8882]"
+                      className={`w-full px-3.5 py-2 rounded-xl bg-stone-900 border ${invalidPriceField === 'price' ? 'border-red-500' : 'border-stone-800'} text-white text-sm font-bold focus:outline-none focus:border-[#2A8882]`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs text-stone-400 mb-1 font-medium">
+                    <label htmlFor="product-promo-price" className="block text-xs text-stone-400 mb-1 font-medium">
                       Preço com Desconto (R$)
                     </label>
                     <input
+                      id="product-promo-price"
+                      aria-invalid={invalidPriceField === 'promotionalPrice' || undefined}
+                      aria-describedby={invalidPriceField === 'promotionalPrice' ? 'product-error-msg' : undefined}
                       type="number"
                       step="0.01"
                       disabled={!isOnSale}
                       value={promotionalPrice || ''}
                       onChange={(e) => setPromotionalPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
                       placeholder={isOnSale ? 'Ex: 69.90' : 'Desativado'}
-                      className="w-full px-3.5 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white text-sm font-bold disabled:opacity-40 focus:outline-none focus:border-[#F4803E]"
+                      className={`w-full px-3.5 py-2 rounded-xl bg-stone-900 border ${invalidPriceField === 'promotionalPrice' ? 'border-red-500' : 'border-stone-800'} text-white text-sm font-bold disabled:opacity-40 focus:outline-none focus:border-[#F4803E]`}
                     />
                   </div>
 
@@ -2182,7 +2182,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
           )}
 
           {/* Rodapé Fixo do Modal */}
-          <div className="pt-4 border-t border-stone-800 flex items-center justify-between">
+          <div className="pt-4 border-t border-stone-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={onClose}
@@ -2191,7 +2191,13 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
               Cancelar
             </button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:min-w-0">
+              {errorMsg && (
+                <div id="product-error-msg" role="alert" className="p-3 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs flex items-center gap-2 wrap-break-word min-w-0">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={isSaving}

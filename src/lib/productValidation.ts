@@ -14,3 +14,10 @@ export function validatePromotion(
   if (promotionalPrice >= price) return 'O preço promocional precisa ser menor que o preço normal.';
   return null;
 }
+
+// Qual campo de preço a mensagem de validatePromotion aponta (para destacar no formulário).
+export function priceFieldForError(msg: string): 'promotionalPrice' | 'price' | null {
+  if (msg === 'Informe um preço válido.') return 'price';
+  if (msg.startsWith('O preço promocional') || msg === 'Informe um preço promocional válido.') return 'promotionalPrice';
+  return null;
+}
