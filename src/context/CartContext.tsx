@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, Product, StoreSettings } from '../types/ecommerce';
-import { StoreService } from '../lib/storage';
+import { buildWhatsAppOrderUrl } from '../lib/whatsappOrder';
 import { trackAddToCart, trackInitiateCheckout } from '../lib/analytics';
 
 interface CartContextType {
@@ -11,8 +11,6 @@ interface CartContextType {
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
-  freeShippingThreshold: number;
-  remainingForFreeShipping: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   checkoutWhatsApp: (settings: StoreSettings, customerNotes?: string, customerName?: string, customerCity?: string) => void;
@@ -126,9 +124,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return acc + unitPrice * item.quantity;
   }, 0);
 
-  const freeShippingThreshold = 299;
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
-
   const checkoutWhatsApp = (
     settings: StoreSettings, 
     customerNotes?: string, 
@@ -140,83 +135,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Disparar evento InitiateCheckout para Meta, TikTok e GA4
     trackInitiateCheckout(cart, subtotal);
 
-    const orderNumber = `SES-${Date.now().toString().slice(-6)}`;
-    const phone = settings.whatsappNumber.replace(/\D/g, '') || '5581920019982';
-
-    // Construção profissional e organizada da mensagem conforme Seção 13
-    let msg = `☀️ *PEDIDO SILVA E SOL - ${orderNumber}*\n`;
-    msg += `Olá! Gostaria de fechar meu pedido na loja oficial Silva e Sol.\n\n`;
-
-    if (customerName) {
-      msg += `👤 *Cliente:* ${customerName}\n`;
-    }
-    if (customerCity) {
-      msg += `📍 *Cidade/UF:* ${customerCity}\n`;
-    }
-    msg += `------------------------------------\n`;
-    msg += `📦 *ITENS DO PEDIDO:*\n\n`;
-
-    cart.forEach((item, index) => {
-      const effectivePrice = item.promotionalPrice || item.price;
-      const itemSubtotal = effectivePrice * item.quantity;
-      msg += `${index + 1}. *${item.name}*\n`;
-      
-      const details: string[] = [];
-      if (item.selectedSize) details.push(`Tamanho: ${item.selectedSize}`);
-      if (item.selectedColor) details.push(`Cor: ${item.selectedColor}`);
-      if (item.selectedModel) details.push(`Modelo: ${item.selectedModel}`);
-      
-      if (details.length > 0) {
-        msg += `   └ ${details.join(' | ')}\n`;
-      }
-      msg += `   └ Qtd: ${item.quantity} un. x R$ ${effectivePrice.toFixed(2).replace('.', ',')} = *R$ ${itemSubtotal.toFixed(2).replace('.', ',')}*\n\n`;
-    });
-
-    msg += `------------------------------------\n`;
-    msg += `💰 *SUBTOTAL:* R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
-    
-    if (subtotal >= freeShippingThreshold) {
-      msg += `🚚 *FRETE:* Benefício Frete Grátis Qualificado! (Consulte CEP)\n`;
-    } else {
-      msg += `🚚 *FRETE:* A calcular para meu CEP\n`;
-    }
-    msg += `⭐ *TOTAL ESTIMADO:* R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
-
-    if (customerNotes && customerNotes.trim()) {
-      msg += `\n📝 *Observações:* ${customerNotes.trim()}\n`;
-    }
-
-    msg += `\nAguardo as instruções para pagamento via Pix/Cartão e envio. Obrigado! ☀️🌊`;
-
-    // Gravar pedido no histórico
-    StoreService.saveOrder({
-      id: orderNumber,
-      orderNumber,
-      customerName: customerName || 'Cliente WhatsApp',
-      customerPhone: '',
-      customerCity: customerCity || '',
-      customerNotes: customerNotes || '',
-      subtotal,
-      discount: 0,
-      total: subtotal,
-      status: 'pending_whatsapp',
-      items: cart.map(i => ({
-        id: i.id,
-        productId: i.productId,
-        productName: i.name,
-        size: i.selectedSize,
-        color: i.selectedColor,
-        model: i.selectedModel,
-        quantity: i.quantity,
-        unitPrice: i.promotionalPrice || i.price,
-        subtotal: (i.promotionalPrice || i.price) * i.quantity
-      })),
-      createdAt: new Date().toISOString()
-    });
-
-    // Abrir WhatsApp diretamente
-    const encoded = encodeURIComponent(msg);
-    const url = `https://wa.me/${phone}?text=${encoded}`;
+    const url = buildWhatsAppOrderUrl(cart, settings, { customerName, customerCity, customerNotes });
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -230,8 +149,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearCart,
         totalItems,
         subtotal,
-        freeShippingThreshold,
-        remainingForFreeShipping,
         isCartOpen,
         setIsCartOpen,
         checkoutWhatsApp
