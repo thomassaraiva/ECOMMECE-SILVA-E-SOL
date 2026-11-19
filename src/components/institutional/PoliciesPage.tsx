@@ -96,7 +96,6 @@ export const PoliciesPage: React.FC = () => {
               <div className="space-y-2 text-xs text-stone-400 pt-2 border-t border-stone-800">
                 <p><strong>Postagem Rápida:</strong> Os pedidos com pagamento confirmado são separados e postados em até 1 a 2 dias úteis.</p>
                 <p><strong>Código de Rastreio:</strong> Assim que a encomenda for despachada, você recebe o código de rastreamento oficial no WhatsApp para acompanhar cada etapa da entrega.</p>
-                <p><strong>Frete Grátis:</strong> Compras acima do valor qualificado ganham benefício especial de frete gratuito.</p>
               </div>
             </div>
           )}

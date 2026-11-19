@@ -12,6 +12,7 @@ import {
   Filter
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { validatePromotion } from '../../lib/productValidation';
 import { Product } from '../../types/ecommerce';
 
 export const AdminPromotionsTab: React.FC = () => {
@@ -23,6 +24,7 @@ export const AdminPromotionsTab: React.FC = () => {
   const [batchPercent, setBatchPercent] = useState(15);
   const [batchCategoryId, setBatchCategoryId] = useState('all');
   const [actionSuccess, setActionSuccess] = useState('');
+  const [promoError, setPromoError] = useState('');
 
   const triggerSuccess = (msg: string) => {
     setActionSuccess(msg);
@@ -45,6 +47,12 @@ export const AdminPromotionsTab: React.FC = () => {
     try {
       if (percent <= 0 || percent >= 100) return;
       const promoPrice = Math.round((product.price * (1 - percent / 100)) * 100) / 100;
+      const invalid = validatePromotion(product.price, promoPrice);
+      if (invalid) {
+        setPromoError(`"${product.name}": ${invalid}`);
+        return;
+      }
+      setPromoError('');
       await updateProduct(product.id, {
         isOnSale: true,
         promotionalPrice: promoPrice
@@ -75,6 +83,15 @@ export const AdminPromotionsTab: React.FC = () => {
         ? products
         : products.filter(p => p.categoryId === batchCategoryId);
 
+      const firstInvalid = targetProducts
+        .map(p => ({ p, msg: validatePromotion(p.price, Math.round((p.price * (1 - batchPercent / 100)) * 100) / 100) }))
+        .find(x => x.msg);
+      if (firstInvalid) {
+        setPromoError(`"${firstInvalid.p.name}": ${firstInvalid.msg}`);
+        return;
+      }
+      setPromoError('');
+
       if (!confirm(`Aplicar ${batchPercent}% de desconto em ${targetProducts.length} produtos?`)) return;
 
       for (const prod of targetProducts) {
@@ -98,6 +115,13 @@ export const AdminPromotionsTab: React.FC = () => {
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-900 border border-emerald-700 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold">
           <Check className="w-4 h-4 text-emerald-400" />
           <span>{actionSuccess}</span>
+        </div>
+      )}
+
+      {promoError && (
+        <div role="alert" className="bg-red-950 border border-red-800 text-red-200 px-4 py-3 rounded-2xl flex items-center gap-2.5 text-xs font-semibold">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <span>{promoError}</span>
         </div>
       )}
 

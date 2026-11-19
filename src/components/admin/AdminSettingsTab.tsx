@@ -34,6 +34,9 @@ export const AdminSettingsTab: React.FC = () => {
     'Seus dados de navegação e compras são protegidos e tratados sob estritas normas de sigilo e LGPD.'
   );
 
+  const [legalName, setLegalName] = useState(settings.legalName || '');
+  const [cnpj, setCnpj] = useState(settings.cnpj || '');
+  const [address, setAddress] = useState(settings.address || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveErrorMsg, setSaveErrorMsg] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
@@ -52,7 +55,10 @@ export const AdminSettingsTab: React.FC = () => {
         freeShippingThreshold: Number(freeShippingThreshold),
         exchangePolicy: exchangePolicy.trim(),
         shippingInfo: shippingInfo.trim(),
-        privacyPolicy: privacyPolicy.trim()
+        privacyPolicy: privacyPolicy.trim(),
+        legalName: legalName.trim(),
+        cnpj: cnpj.trim(),
+        address: address.trim()
       });
       setActionSuccess('Configurações da loja salvas com sucesso!');
       setTimeout(() => setActionSuccess(''), 3000);
@@ -166,6 +172,43 @@ export const AdminSettingsTab: React.FC = () => {
                 className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs sm:text-sm focus:outline-none focus:border-[#2A8882]"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Dados Legais (exibidos no rodapé) */}
+        <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 space-y-4 shadow-xl">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-teal-400">Dados Legais da Loja</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="settings-legal-name" className="block text-xs font-semibold text-stone-300 mb-1">Razão social</label>
+              <input
+                id="settings-legal-name"
+                type="text"
+                value={legalName}
+                onChange={(e) => setLegalName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs sm:text-sm focus:outline-none focus:border-[#2A8882]"
+              />
+            </div>
+            <div>
+              <label htmlFor="settings-cnpj" className="block text-xs font-semibold text-stone-300 mb-1">CNPJ</label>
+              <input
+                id="settings-cnpj"
+                type="text"
+                value={cnpj}
+                onChange={(e) => setCnpj(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs sm:text-sm focus:outline-none focus:border-[#2A8882]"
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="settings-address" className="block text-xs font-semibold text-stone-300 mb-1">Endereço completo</label>
+            <input
+              id="settings-address"
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs sm:text-sm focus:outline-none focus:border-[#2A8882]"
+            />
           </div>
         </div>
 

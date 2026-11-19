@@ -131,7 +131,7 @@ export const Footer: React.FC = () => {
             <div className="space-y-3 text-xs text-[#736A5E]">
               <div className="flex items-start gap-2 bg-white p-3 rounded-xl border border-[#E6DDD0] shadow-2xs">
                 <ShieldCheck className="w-4 h-4 text-[#2A8882] shrink-0 mt-0.5" />
-                <span>Atendimento humano com suporte dedicado, confirmação rápida de estoque e envio seguro para todo o Brasil.</span>
+                <span>Atendimento humano com suporte dedicado, confirmação rápida de estoque.</span>
               </div>
               <div className="pt-2">
                 <button
@@ -150,7 +150,12 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Rodapé inferior com direitos autorais */}
-        <div className="mt-12 pt-8 border-t border-[#E6DDD0] flex flex-col sm:flex-row items-center justify-between text-xs text-[#8A8072] gap-4">
+        {(settings.legalName || settings.cnpj || settings.address) && (
+          <p className="mt-12 text-[11px] leading-relaxed text-[#8A8072]">
+            {[settings.legalName, settings.cnpj && `CNPJ ${settings.cnpj}`, settings.address].filter(Boolean).join(' · ')}
+          </p>
+        )}
+        <div className="mt-4 pt-8 border-t border-[#E6DDD0] flex flex-col sm:flex-row items-center justify-between text-xs text-[#8A8072] gap-4">
           <p>© {new Date().getFullYear()} SILVA E SOL. Todos os direitos reservados. Feito do seu jeito.</p>
           <p className="flex items-center gap-1.5 text-[#736A5E]">
             <span>Energia solar e moda masculina autêntica ☀️</span>

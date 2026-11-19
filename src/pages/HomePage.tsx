@@ -5,7 +5,7 @@ import { FeaturedRow } from '../components/home/FeaturedRow';
 import { BrandStory } from '../components/home/BrandStory';
 import { useStore } from '../context/StoreContext';
 import { StoreStatus } from '../components/common/StoreStatus';
-import { ShieldCheck, Truck, RefreshCw, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const { products, isLoading, loadError, reload, settings } = useStore();
@@ -32,38 +32,8 @@ export const HomePage: React.FC = () => {
       {/* Faixa de Vantagens e Confiança Solar (Paleta Areia Leve) */}
       <section className="bg-[#F5EFE6] border-b border-[#E6DDD0] py-4 sm:py-5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 text-center">
             
-            <div className="flex items-center justify-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#FEF2EA] flex items-center justify-center text-[#F4803E] shrink-0">
-                <Truck className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-[#2D2823]">Envio Rápido Brasil</p>
-                <p className="text-[10px] text-[#736A5E]">Rastreamento seguro</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#E8F4F3] flex items-center justify-center text-[#2A8882] shrink-0">
-                <RefreshCw className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-[#2D2823]">Troca Fácil 7 Dias</p>
-                <p className="text-[10px] text-[#736A5E]">Sem burocracia</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#FEF2EA] flex items-center justify-center text-[#F4803E] shrink-0">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-[#2D2823]">Proteção UV50+</p>
-                <p className="text-[10px] text-[#736A5E]">Tecidos nobres e duráveis</p>
-              </div>
-            </div>
-
             <div className="flex items-center justify-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-[#E8F4F3] flex items-center justify-center text-[#2A8882] shrink-0">
                 <MessageCircle className="w-4 h-4" />

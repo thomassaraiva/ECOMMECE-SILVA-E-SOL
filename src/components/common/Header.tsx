@@ -19,7 +19,7 @@ export const Header: React.FC = () => {
             <div className="flex-1 flex items-center justify-center gap-2">
               <Sun className="w-3.5 h-3.5 text-[#F4803E] animate-pulse" />
               <span className="truncate">
-                Frete Especial para todo o Brasil • Fechamento rápido via WhatsApp • 100% Seguro
+                Atendimento humano pelo WhatsApp
               </span>
             </div>
             <button

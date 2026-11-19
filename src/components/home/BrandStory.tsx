@@ -63,8 +63,8 @@ export const BrandStory: React.FC = () => {
                 <div className="w-8 h-8 rounded-lg bg-[#FEF2EA] flex items-center justify-center text-[#F4803E] mb-2.5">
                   <Sun className="w-4 h-4" />
                 </div>
-                <h5 className="font-bold text-xs text-[#2D2823] mb-1">Proteção & Frescor</h5>
-                <p className="text-[11px] text-[#736A5E]">Secagem ultra-rápida e fios inteligentes para praia e cidade.</p>
+                <h5 className="font-bold text-xs text-[#2D2823] mb-1">Frescor</h5>
+                <p className="text-[11px] text-[#736A5E]">Peças leves e de secagem rápida.</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-white border border-[#E8DEC8] shadow-2xs">
@@ -80,7 +80,7 @@ export const BrandStory: React.FC = () => {
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <h5 className="font-bold text-xs text-[#2D2823] mb-1">Compra Transparente</h5>
-                <p className="text-[11px] text-[#736A5E]">Atendimento direto e envio com código rastreado.</p>
+                <p className="text-[11px] text-[#736A5E]">Atendimento direto pelo WhatsApp.</p>
               </div>
             </div>
 

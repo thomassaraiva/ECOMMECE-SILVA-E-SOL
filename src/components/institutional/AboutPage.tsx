@@ -75,7 +75,7 @@ export const AboutPage: React.FC = () => {
           <div className="p-5 rounded-2xl bg-stone-900 border border-stone-800 text-center">
             <Waves className="w-8 h-8 text-emerald-400 mx-auto mb-3" />
             <h4 className="font-heading font-bold text-sm text-stone-100">Vida ao Ar Livre</h4>
-            <p className="text-xs text-stone-400 mt-1">Peças leves, secagem rápida e proteção UV50+ permanente.</p>
+            <p className="text-xs text-stone-400 mt-1">Peças leves e de secagem rápida.</p>
           </div>
 
           <div className="p-5 rounded-2xl bg-stone-900 border border-stone-800 text-center">

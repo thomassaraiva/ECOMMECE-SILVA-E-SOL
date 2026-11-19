@@ -20,7 +20,7 @@ export const CategoryGrid: React.FC = () => {
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-[#736A5E] max-w-sm">
-            Cortes anatômicos, tecidos nobres com proteção UV e acabamento de alta resistência para o homem que valoriza elegância e leveza.
+            Cortes anatômicos para o homem que valoriza elegância e leveza.
           </p>
         </div>
 

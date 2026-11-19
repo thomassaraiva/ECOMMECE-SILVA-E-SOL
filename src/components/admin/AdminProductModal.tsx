@@ -34,6 +34,7 @@ import {
 import { Product, Category, Subcategory, SizeChart, SizeChartRow, ProductVariant } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
 import { getDefaultSizeChartForCategory, SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
+import { validatePromotion } from '../../lib/productValidation';
 import { optimizeProductVariantImage, formatBytes } from '../../lib/imageOptimizer';
 import { uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
 
@@ -521,6 +522,14 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     if (images.length === 0) {
       setErrorMsg('Adicione pelo menos uma foto para o produto.');
       setActiveTab('media');
+      return;
+    }
+    const promoError = isOnSale && promotionalPrice
+      ? validatePromotion(Number(price), Number(promotionalPrice))
+      : null;
+    if (promoError) {
+      setErrorMsg(promoError);
+      setActiveTab('general');
       return;
     }
 

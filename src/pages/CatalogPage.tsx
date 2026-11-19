@@ -26,7 +26,7 @@ export const CatalogPage: React.FC = () => {
             {currentCategory ? currentCategory.name : 'Catálogo Completo'}
           </h1>
           <p className="text-xs sm:text-sm text-[#736A5E] max-w-xl">
-            Peças desenvolvidas com tecidos nobres, modelagens confortáveis e a vibração autêntica do sol brasileiro.
+            Peças com modelagens confortáveis e a vibração autêntica do sol brasileiro.
           </p>
         </div>
 

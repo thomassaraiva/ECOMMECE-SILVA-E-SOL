@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { 
   ShoppingBag, 
   MessageCircle, 
-  ShieldCheck, 
-  Truck, 
   ArrowLeft, 
   Check, 
   Percent, 
@@ -562,18 +560,6 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
                 <MessageCircle className="w-5 h-5 fill-white text-white" />
                 <span>Comprar com Atendente no WhatsApp</span>
               </button>
-            </div>
-
-            {/* Vantagens e Garantia Solar */}
-            <div className="p-4 rounded-2xl bg-[#F4EFE6] border border-[#E6DDD0] space-y-3 text-xs text-[#736A5E]">
-              <div className="flex items-center gap-2.5">
-                <Truck className="w-4 h-4 text-[#F4803E] shrink-0" />
-                <span>Envio rápido com rastreamento para todo o Brasil.</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-[#2A8882] shrink-0" />
-                <span>Troca grátis e descomplicada em até 7 dias após a entrega.</span>
-              </div>
             </div>
 
             {/* Descrição Detalhada / Ficha Técnica */}
