@@ -193,10 +193,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setCategoryId(categories[0]?.id || '');
       setSubcategoryId('');
       setStockQuantity(20);
-      setImages([
-        'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
-      ]);
+      setImages([]);
       setVideoUrl('');
       setSizesStr('P (38), M (40), G (42), GG (44-46)');
       setColorsStr('Verde, Azul, Branco, Preto');
