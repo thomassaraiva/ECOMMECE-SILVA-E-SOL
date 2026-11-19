@@ -207,10 +207,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             )}
           </div>
 
-          <p className="text-[11px] text-[#8A8072] mt-0.5">
-            em até 3x de {formatBRL(shownPrice / 3)} sem juros
-          </p>
-
           {/* Botão Mobile de Adição Rápida */}
           <button
             type="button"

@@ -160,21 +160,21 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
     ? Math.round(((product.price - promoPrice) / product.price) * 100)
     : 0;
 
-  const basePrice = matchedVariant?.price || product.price;
-  const currentPrice = promoPrice < product.price ? promoPrice : basePrice;
+  // Até o S2, o preço da variação não é cobrado: mostra só o preço do produto (o mesmo da sacola e do WhatsApp)
+  const currentPrice = promoPrice;
 
   const category = categories.find(c => c.id === product.categoryId);
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
-    addToCart(product, quantity, selectedSize, selectedColor, selectedModel);
+    addToCart(product, selectedSize, selectedColor, selectedModel, quantity);
     setIsCartOpen(true);
   };
 
   const handleBuyNowWhatsApp = () => {
     if (isOutOfStock) return;
     trackContactWhatsApp(`Compra Rápida: ${product.name}`);
-    addToCart(product, quantity, selectedSize, selectedColor, selectedModel);
+    addToCart(product, selectedSize, selectedColor, selectedModel, quantity);
     setIsCartOpen(true);
   };
 
@@ -383,9 +383,6 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[#736A5E]">
-                Em até 3x de {formatBRL(currentPrice / 3)} sem juros no cartão ou via Pix
-              </p>
             </div>
 
             {/* Descrição Curta */}

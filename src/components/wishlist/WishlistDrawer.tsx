@@ -137,7 +137,7 @@ export const WishlistDrawer: React.FC = () => {
                       <div className="flex items-center gap-2 mt-2.5">
                         <button
                           onClick={() => {
-                            addToCart(item, 1, item.sizes[0], item.colors[0]);
+                            addToCart(item, item.sizes[0], item.colors[0], undefined, 1);
                             setIsWishlistOpen(false);
                             setIsCartOpen(true);
                           }}
