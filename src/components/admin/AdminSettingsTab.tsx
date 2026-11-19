@@ -21,14 +21,8 @@ export const AdminSettingsTab: React.FC = () => {
   const [contactEmail, setContactEmail] = useState(settings.contactEmail || 'contato@silvaesol.com.br');
   const [instagramHandle, setInstagramHandle] = useState(settings.instagramHandle || '@silvaesol');
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(settings.freeShippingThreshold || 249.90);
-  const [exchangePolicy, setExchangePolicy] = useState(
-    settings.exchangePolicy || 
-    'Primeira troca grátis em até 30 dias após o recebimento. As peças devem estar sem uso, com etiquetas originais e higiênico preservado.'
-  );
-  const [shippingInfo, setShippingInfo] = useState(
-    settings.shippingInfo || 
-    'Enviamos para todo o Brasil com rastreio expresso via Correios e transportadoras parceiras. Frete grátis para compras acima do valor estipulado.'
-  );
+  const [exchangePolicy, setExchangePolicy] = useState(settings.exchangePolicy || '');
+  const [shippingInfo, setShippingInfo] = useState(settings.shippingInfo || '');
   const [privacyPolicy, setPrivacyPolicy] = useState(
     settings.privacyPolicy || 
     'Seus dados de navegação e compras são protegidos e tratados sob estritas normas de sigilo e LGPD.'

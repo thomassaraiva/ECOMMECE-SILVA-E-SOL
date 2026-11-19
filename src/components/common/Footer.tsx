@@ -131,7 +131,7 @@ export const Footer: React.FC = () => {
             <div className="space-y-3 text-xs text-[#736A5E]">
               <div className="flex items-start gap-2 bg-white p-3 rounded-xl border border-[#E6DDD0] shadow-2xs">
                 <ShieldCheck className="w-4 h-4 text-[#2A8882] shrink-0 mt-0.5" />
-                <span>Atendimento humano com suporte dedicado, confirmação rápida de estoque.</span>
+                <span>Atendimento humano com suporte dedicado.</span>
               </div>
               <div className="pt-2">
                 <button

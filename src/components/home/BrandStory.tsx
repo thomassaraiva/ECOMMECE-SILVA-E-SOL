@@ -72,7 +72,7 @@ export const BrandStory: React.FC = () => {
                   <Feather className="w-4 h-4" />
                 </div>
                 <h5 className="font-bold text-xs text-[#2D2823] mb-1">Caimento Preciso</h5>
-                <p className="text-[11px] text-[#736A5E]">Costuras reforçadas e forro premium antialérgico.</p>
+                <p className="text-[11px] text-[#736A5E]">Forro interno em microfibra e cordão de ajuste na cintura.</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-white border border-[#E8DEC8] shadow-2xs">

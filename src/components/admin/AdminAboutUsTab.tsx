@@ -14,18 +14,9 @@ export const AdminAboutUsTab: React.FC = () => {
   const { settings, updateSettings, setCurrentPage } = useStore();
 
   const [aboutTitle, setAboutTitle] = useState(settings.aboutTitle || 'A Alma Silva e Sol');
-  const [aboutText, setAboutText] = useState(
-    settings.aboutText || 
-    'Nascida à beira-mar sob a intensidade do sol tropical brasileiro, a Silva e Sol traduz a essência do verão permanente em moda masculina praia e solar. Nossas peças combinam modelagens anatômicas perfeitas com tecidos inteligentes de secagem ultrarrápida e proteção UV50+.'
-  );
-  const [missionText, setMissionText] = useState(
-    settings.missionText || 
-    'Celebrar a liberdade e o estilo solar do homem contemporâneo com peças resistentes ao cloro, sal e sol, aliando sofisticação e conforto impecável.'
-  );
-  const [manifestoText, setManifestoText] = useState(
-    settings.manifestoText || 
-    'Viver o sol não é só uma estação, é um estado de espírito. Criamos sungas e roupas pensadas para quem não abre mão de liberdade, caimento refinado e acabamento de alto padrão.'
-  );
+  const [aboutText, setAboutText] = useState(settings.aboutText || '');
+  const [missionText, setMissionText] = useState(settings.missionText || '');
+  const [manifestoText, setManifestoText] = useState(settings.manifestoText || '');
   const [aboutImageUrl, setAboutImageUrl] = useState(
     settings.aboutImageUrl || 
     'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80'

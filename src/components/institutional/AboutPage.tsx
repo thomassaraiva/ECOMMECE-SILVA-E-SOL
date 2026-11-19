@@ -57,10 +57,10 @@ export const AboutPage: React.FC = () => {
             O Que Torna Nossas Peças Únicas
           </h3>
           <p>
-            Não acreditamos em estampas passageiras ou modelagens genéricas. Cada sunga da Silva e Sol é pensada com forro duplo que não junta areia, elástico que não perde a tensão após o contato com a água salobra e cordões reforçados que garantem estabilidade para o banho de mar ou a prática esportiva.
+            Não acreditamos em estampas passageiras ou modelagens genéricas. Cada sunga da Silva e Sol é pensada com forro interno em microfibra e cordão de ajuste na cintura.
           </p>
           <p>
-            Nossas camisetas e regatas utilizam tramas nobres de algodão pré-lavado, que mantêm a maciez e não encolhem, permitindo uma transição orgânica do calçadão à noite na cidade.
+            Nossas peças são em poliéster com elastano e de secagem rápida.
           </p>
         </div>
 

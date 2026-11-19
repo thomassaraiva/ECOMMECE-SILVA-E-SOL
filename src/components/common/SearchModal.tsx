@@ -56,7 +56,7 @@ export const SearchModal: React.FC = () => {
               Buscas Populares
             </p>
             <div className="flex flex-wrap gap-2">
-              {['Sunga Tradicional', 'Sunga Slim', 'Camiseta Algodão Nobre', 'Short Linho', 'Regata Canelada', 'Verde Costeiro'].map((term) => (
+              {['Sunga Tradicional', 'Sunga Slim', 'Camiseta', 'Short Linho', 'Regata Canelada', 'Verde Costeiro'].map((term) => (
                 <button
                   key={term}
                   onClick={() => setQuery(term)}

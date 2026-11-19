@@ -228,7 +228,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       .replace(/(^-|-$)+/g, '');
     setSlug(generated);
     if (!seoTitle) setSeoTitle(`${name} | Silva e Sol`);
-    if (!seoDescription) setSeoDescription(description || `Compre ${name} na Silva e Sol com frete especial e atendimento direto via WhatsApp.`);
+    if (!seoDescription) setSeoDescription(description || `Compre ${name} na Silva e Sol com atendimento direto via WhatsApp.`);
   };
 
   // Upload de Imagens Múltiplas via FileReader
@@ -524,8 +524,8 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setActiveTab('media');
       return;
     }
-    const promoError = isOnSale && promotionalPrice
-      ? validatePromotion(Number(price), Number(promotionalPrice))
+    const promoError = isOnSale
+      ? validatePromotion(Number(price), promotionalPrice == null ? undefined : Number(promotionalPrice), { required: true })
       : null;
     if (promoError) {
       setErrorMsg(promoError);
@@ -937,7 +937,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                   required
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Resumo dos diferenciais da peça (tecido, proteção solar, secagem rápida)..."
+                  placeholder="Resumo da peça (tecido, forro, modelagem)..."
                   className="w-full p-3 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
                 />
               </div>
@@ -2233,7 +2233,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                   rows={3}
                   value={seoDescription}
                   onChange={(e) => setSeoDescription(e.target.value)}
-                  placeholder="Ex: Conheça a Sunga Solar Degradê da Silva e Sol. Modelagem anatômica, tecido de secagem ultrarrápida e proteção UV50+. Compre direto via WhatsApp."
+                  placeholder="Ex.: Sunga em poliéster com elastano, forro em microfibra."
                   className="w-full p-3 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
                 />
               </div>
