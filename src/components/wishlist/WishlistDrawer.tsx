@@ -3,6 +3,7 @@ import { X, Heart, ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
 import { useWishlist } from '../../context/WishlistContext';
 import { useCart } from '../../context/CartContext';
 import { useStore } from '../../context/StoreContext';
+import { PRODUCT_IMAGE_FALLBACK } from '../../lib/placeholders';
 
 export const WishlistDrawer: React.FC = () => {
   const { wishlist, removeFromWishlist, clearWishlist, isWishlistOpen, setIsWishlistOpen } = useWishlist();
@@ -91,7 +92,7 @@ export const WishlistDrawer: React.FC = () => {
                       className="w-18 h-22 rounded-lg overflow-hidden bg-[#F4EFE6] shrink-0 relative group"
                     >
                       <img
-                        src={item.images[0] || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80'}
+                        src={item.images[0] || PRODUCT_IMAGE_FALLBACK}
                         alt={item.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         referrerPolicy="no-referrer"

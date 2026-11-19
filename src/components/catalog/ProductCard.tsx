@@ -4,6 +4,7 @@ import { Product } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { PRODUCT_IMAGE_FALLBACK } from '../../lib/placeholders';
 
 interface ProductCardProps {
   product: Product;
@@ -39,7 +40,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       {/* Container de Imagem */}
       <div className="relative aspect-[4/5] bg-[#F5EFE6] overflow-hidden">
         <img
-          src={hoveredImage || product.images[0] || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'}
+          src={hoveredImage || product.images[0] || PRODUCT_IMAGE_FALLBACK}
           alt={product.name}
           loading="lazy"
           referrerPolicy="no-referrer"

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, Product, StoreSettings } from '../types/ecommerce';
 import { buildWhatsAppOrderUrl } from '../lib/whatsappOrder';
 import { trackAddToCart, trackInitiateCheckout } from '../lib/analytics';
+import { PRODUCT_IMAGE_FALLBACK } from '../lib/placeholders';
 
 interface CartContextType {
   cart: CartItem[];
@@ -74,7 +75,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           selectedColor: c,
           selectedModel: m,
           quantity: Math.min(quantity, product.stockQuantity || 99),
-          image: product.images[0] || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+          image: product.images[0] || PRODUCT_IMAGE_FALLBACK,
           maxStock: product.stockQuantity || 99,
           weightGrams: product.weightGrams ?? 200,
           heightCm: product.heightCm ?? 4,
