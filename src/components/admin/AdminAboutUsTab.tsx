@@ -47,6 +47,8 @@ export const AdminAboutUsTab: React.FC = () => {
       });
       setActionSuccess('Conteúdo institucional atualizado com sucesso!');
       setTimeout(() => setActionSuccess(''), 3000);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
     } finally {
       setIsSaving(false);
     }

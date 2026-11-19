@@ -8,6 +8,7 @@ import { StoreStatus } from '../components/common/StoreStatus';
 export const CatalogPage: React.FC = () => {
   const { filteredProducts, filters, categories, products, isLoading, loadError, reload, settings } = useStore();
   
+  const hasActiveProducts = products.some(p => p.isActive);
   const currentCategory = categories.find(c => c.id === filters.categoryId);
 
   return (
@@ -33,11 +34,11 @@ export const CatalogPage: React.FC = () => {
         <CatalogFilters totalResults={filteredProducts.length} />
 
         {/* Grade de Produtos */}
-        {isLoading || loadError || products.length === 0 ? (
+        {isLoading || loadError || !hasActiveProducts ? (
           <StoreStatus
             isLoading={isLoading}
             loadError={loadError}
-            hasProducts={products.length > 0}
+            hasProducts={hasActiveProducts}
             whatsappNumber={settings.whatsappNumber}
             onRetry={reload}
           />

@@ -411,7 +411,7 @@ export const AdminBannersTab: React.FC = () => {
                 {/* Ações */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => toggleBannerStatus(banner.id)}
+                    onClick={() => toggleBannerStatus(banner.id).catch(() => { /* só evita a rejeição não tratada: o erro aparece na faixa do painel (runAdmin) */ })}
                     className="p-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                     title="Ativar ou desativar exibição"
                   >
@@ -430,8 +430,9 @@ export const AdminBannersTab: React.FC = () => {
                   <button
                     onClick={() => {
                       if (confirm(`Deseja realmente excluir o banner "${banner.title}"?`)) {
-                        deleteBanner(banner.id);
-                        triggerSuccess('Banner removido.');
+                        deleteBanner(banner.id)
+                          .then(() => triggerSuccess('Banner removido.'))
+                          .catch(() => { /* só evita a rejeição não tratada: o erro aparece na faixa do painel (runAdmin) */ });
                       }
                     }}
                     className="p-2.5 rounded-xl text-stone-500 hover:text-red-400 hover:bg-stone-800 transition-colors cursor-pointer"

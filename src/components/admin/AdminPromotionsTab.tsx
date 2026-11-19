@@ -42,41 +42,53 @@ export const AdminPromotionsTab: React.FC = () => {
   });
 
   const handleApplySinglePromo = async (product: Product, percent: number) => {
-    if (percent <= 0 || percent >= 100) return;
-    const promoPrice = Math.round((product.price * (1 - percent / 100)) * 100) / 100;
-    await updateProduct(product.id, {
-      isOnSale: true,
-      promotionalPrice: promoPrice
-    });
-    triggerSuccess(`Desconto de ${percent}% aplicado em "${product.name}". Preço: R$ ${promoPrice.toFixed(2).replace('.', ',')}`);
-  };
-
-  const handleRemovePromo = async (product: Product) => {
-    await updateProduct(product.id, {
-      isOnSale: false,
-      promotionalPrice: undefined,
-      promotionStartDate: undefined,
-      promotionEndDate: undefined
-    });
-    triggerSuccess(`Promoção removida de "${product.name}".`);
-  };
-
-  const handleApplyBatchDiscount = async () => {
-    const targetProducts = batchCategoryId === 'all'
-      ? products
-      : products.filter(p => p.categoryId === batchCategoryId);
-
-    if (!confirm(`Aplicar ${batchPercent}% de desconto em ${targetProducts.length} produtos?`)) return;
-
-    for (const prod of targetProducts) {
-      const promoPrice = Math.round((prod.price * (1 - batchPercent / 100)) * 100) / 100;
-      await updateProduct(prod.id, {
+    try {
+      if (percent <= 0 || percent >= 100) return;
+      const promoPrice = Math.round((product.price * (1 - percent / 100)) * 100) / 100;
+      await updateProduct(product.id, {
         isOnSale: true,
         promotionalPrice: promoPrice
       });
+      triggerSuccess(`Desconto de ${percent}% aplicado em "${product.name}". Preço: R$ ${promoPrice.toFixed(2).replace('.', ',')}`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
     }
+  };
 
-    triggerSuccess(`Desconto em massa de ${batchPercent}% aplicado em ${targetProducts.length} itens.`);
+  const handleRemovePromo = async (product: Product) => {
+    try {
+      await updateProduct(product.id, {
+        isOnSale: false,
+        promotionalPrice: undefined,
+        promotionStartDate: undefined,
+        promotionEndDate: undefined
+      });
+      triggerSuccess(`Promoção removida de "${product.name}".`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
+  };
+
+  const handleApplyBatchDiscount = async () => {
+    try {
+      const targetProducts = batchCategoryId === 'all'
+        ? products
+        : products.filter(p => p.categoryId === batchCategoryId);
+
+      if (!confirm(`Aplicar ${batchPercent}% de desconto em ${targetProducts.length} produtos?`)) return;
+
+      for (const prod of targetProducts) {
+        const promoPrice = Math.round((prod.price * (1 - batchPercent / 100)) * 100) / 100;
+        await updateProduct(prod.id, {
+          isOnSale: true,
+          promotionalPrice: promoPrice
+        });
+      }
+
+      triggerSuccess(`Desconto em massa de ${batchPercent}% aplicado em ${targetProducts.length} itens.`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
   };
 
   return (

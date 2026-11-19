@@ -47,6 +47,7 @@ export const AdminSettingsTab: React.FC = () => {
   const [credMessage, setCredMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [saveErrorMsg, setSaveErrorMsg] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
   const handleUpdateCredentials = (e: React.FormEvent) => {
@@ -64,6 +65,7 @@ export const AdminSettingsTab: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    setSaveErrorMsg('');
     try {
       await updateSettings({
         storeName: storeName.trim(),
@@ -78,6 +80,9 @@ export const AdminSettingsTab: React.FC = () => {
       });
       setActionSuccess('Configurações da loja salvas com sucesso!');
       setTimeout(() => setActionSuccess(''), 3000);
+    } catch (err: any) {
+      // Os campos continuam preenchidos; a mensagem aparece junto ao botão de salvar.
+      setSaveErrorMsg(err.message || 'Não foi possível salvar as configurações.');
     } finally {
       setIsSaving(false);
     }
@@ -322,7 +327,12 @@ export const AdminSettingsTab: React.FC = () => {
         </div>
 
         {/* Botão de Salvar */}
-        <div className="flex items-center justify-end">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+          {saveErrorMsg && (
+            <div role="alert" className="p-3.5 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs">
+              {saveErrorMsg}
+            </div>
+          )}
           <button
             type="submit"
             disabled={isSaving}

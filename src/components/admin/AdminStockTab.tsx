@@ -30,37 +30,49 @@ export const AdminStockTab: React.FC = () => {
   };
 
   const handleAdjustProductStock = async (product: Product, delta: number) => {
-    const newQty = Math.max(0, product.stockQuantity + delta);
-    await updateProduct(product.id, { stockQuantity: newQty });
-    triggerSuccess(`Estoque de "${product.name}" ajustado para ${newQty} un.`);
+    try {
+      const newQty = Math.max(0, product.stockQuantity + delta);
+      await updateProduct(product.id, { stockQuantity: newQty });
+      triggerSuccess(`Estoque de "${product.name}" ajustado para ${newQty} un.`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
   };
 
   const handleSetProductStockDirect = async (product: Product, newQty: number) => {
-    const safeQty = Math.max(0, newQty);
-    await updateProduct(product.id, { stockQuantity: safeQty });
-    triggerSuccess(`Estoque de "${product.name}" atualizado para ${safeQty} un.`);
+    try {
+      const safeQty = Math.max(0, newQty);
+      await updateProduct(product.id, { stockQuantity: safeQty });
+      triggerSuccess(`Estoque de "${product.name}" atualizado para ${safeQty} un.`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
   };
 
   const handleAdjustVariantStock = async (product: Product, variantIndex: number, delta: number) => {
-    if (!product.variants) return;
-    const updatedVariants = [...product.variants];
-    const current = updatedVariants[variantIndex];
-    const newQty = Math.max(0, current.stockQuantity + delta);
-    updatedVariants[variantIndex] = {
-      ...current,
-      stockQuantity: newQty,
-      isAvailable: newQty > 0
-    };
+    try {
+      if (!product.variants) return;
+      const updatedVariants = [...product.variants];
+      const current = updatedVariants[variantIndex];
+      const newQty = Math.max(0, current.stockQuantity + delta);
+      updatedVariants[variantIndex] = {
+        ...current,
+        stockQuantity: newQty,
+        isAvailable: newQty > 0
+      };
 
-    // Atualiza também o estoque global se for soma das variações
-    const newTotalStock = updatedVariants.reduce((sum, v) => sum + v.stockQuantity, 0);
+      // Atualiza também o estoque global se for soma das variações
+      const newTotalStock = updatedVariants.reduce((sum, v) => sum + v.stockQuantity, 0);
 
-    await updateProduct(product.id, {
-      variants: updatedVariants,
-      stockQuantity: newTotalStock
-    });
+      await updateProduct(product.id, {
+        variants: updatedVariants,
+        stockQuantity: newTotalStock
+      });
 
-    triggerSuccess(`Variação ${current.size || ''} ${current.color || ''} ajustada para ${newQty} un.`);
+      triggerSuccess(`Variação ${current.size || ''} ${current.color || ''} ajustada para ${newQty} un.`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
   };
 
   const filteredProducts = products.filter(p => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   ShoppingBag, 
   Search, 
@@ -37,9 +37,7 @@ const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; border:
 };
 
 export const AdminOrdersTab: React.FC = () => {
-  const { orders, updateOrderStatus, updateOrderTracking, loadOrders } = useStore();
-
-  useEffect(() => { loadOrders().catch(() => {}); }, []);
+  const { orders, updateOrderStatus, updateOrderTracking } = useStore();
 
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -70,8 +68,12 @@ export const AdminOrdersTab: React.FC = () => {
   };
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-    await updateOrderStatus(orderId, newStatus);
-    triggerSuccess(`Status do pedido atualizado para "${STATUS_LABELS[newStatus].label}".`);
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      triggerSuccess(`Status do pedido atualizado para "${STATUS_LABELS[newStatus].label}".`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
   };
 
   const handleOpenClientWhatsApp = (order: Order) => {

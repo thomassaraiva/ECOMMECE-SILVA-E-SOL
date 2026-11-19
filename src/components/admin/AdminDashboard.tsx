@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Package, 
   Layers, 
@@ -47,7 +47,10 @@ export type AdminTab =
 
 export const AdminDashboard: React.FC = () => {
   const { adminUser, logout } = useAuth();
-  const { setCurrentPage, products, orders, adminError, clearAdminError } = useStore();
+  const { setCurrentPage, products, orders, adminError, clearAdminError, loadOrders } = useStore();
+
+  // Carrega os pedidos ao abrir o painel para os contadores e a Visão Geral; o erro já aparece na faixa global.
+  useEffect(() => { loadOrders().catch(() => {}); }, []);
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -143,7 +146,7 @@ export const AdminDashboard: React.FC = () => {
       </header>
 
       {adminError && (
-        <div role="alert" className="mx-4 mt-4 flex items-start justify-between gap-3 rounded-xl border border-red-700 bg-red-950 px-4 py-3 text-sm text-red-100">
+        <div role="alert" className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-xl flex items-start justify-between gap-3 rounded-xl border border-red-700 bg-red-950 px-4 py-3 text-sm text-red-100 shadow-2xl">
           <span>{adminError}</span>
           <button type="button" onClick={clearAdminError} className="font-semibold underline">Fechar</button>
         </div>

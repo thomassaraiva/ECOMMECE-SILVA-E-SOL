@@ -90,15 +90,23 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   }, [products, searchQuery, selectedCategory, statusFilter, promoFilter, stockFilter]);
 
   const handleDuplicate = async (prod: Product) => {
-    const duplicated = await duplicateProduct(prod.id);
-    if (duplicated) {
-      triggerSuccess(`Produto "${prod.name}" duplicado com sucesso!`);
+    try {
+      const duplicated = await duplicateProduct(prod.id);
+      if (duplicated) {
+        triggerSuccess(`Produto "${prod.name}" duplicado com sucesso!`);
+      }
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
     }
   };
 
   const handleToggleStatus = async (prod: Product) => {
-    await toggleProductStatus(prod.id);
-    triggerSuccess(`Status do produto alterado para ${!prod.isActive ? 'Ativo' : 'Inativo'}.`);
+    try {
+      await toggleProductStatus(prod.id);
+      triggerSuccess(`Status do produto alterado para ${!prod.isActive ? 'Ativo' : 'Inativo'}.`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
   };
 
   const confirmDelete = async () => {
@@ -108,6 +116,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       await deleteProduct(productToDelete.id);
       triggerSuccess(`Produto "${productToDelete.name}" removido com sucesso.`);
       setProductToDelete(null);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
     } finally {
       setIsDeleting(false);
     }
