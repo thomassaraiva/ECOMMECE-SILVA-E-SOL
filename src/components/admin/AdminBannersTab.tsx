@@ -28,7 +28,7 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { Banner } from '../../types/ecommerce';
 import { formatBytes, optimizeBannerImage } from '../../lib/imageOptimizer';
-import { supabase, uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
+import { uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
 
 export const AdminBannersTab: React.FC = () => {
   const { banners, categories, products, addBanner, updateBanner, deleteBanner, toggleBannerStatus } = useStore();
@@ -137,10 +137,10 @@ export const AdminBannersTab: React.FC = () => {
       setImageUrl(finalUrl);
       setDesktopFileInfo({
         name: file.name,
-        sizeFormatted: formatBytes(optimized.estimatedSize),
+        sizeFormatted: formatBytes(optimized.compressedSize),
         type: 'image/webp'
       });
-      triggerSuccess(`Banner Desktop otimizado e anexado (${formatBytes(optimized.estimatedSize)})!`);
+      triggerSuccess(`Banner Desktop otimizado e anexado (${formatBytes(optimized.compressedSize)})!`);
     } catch (err: any) {
       alert('Falha ao processar arquivo: ' + err.message);
     } finally {
@@ -177,10 +177,10 @@ export const AdminBannersTab: React.FC = () => {
       setMobileImageUrl(finalUrl);
       setMobileFileInfo({
         name: file.name,
-        sizeFormatted: formatBytes(optimized.estimatedSize),
+        sizeFormatted: formatBytes(optimized.compressedSize),
         type: 'image/webp'
       });
-      triggerSuccess(`Banner Mobile otimizado e anexado (${formatBytes(optimized.estimatedSize)})!`);
+      triggerSuccess(`Banner Mobile otimizado e anexado (${formatBytes(optimized.compressedSize)})!`);
     } catch (err: any) {
       alert('Falha ao processar imagem mobile: ' + err.message);
     } finally {

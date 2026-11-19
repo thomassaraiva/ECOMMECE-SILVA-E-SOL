@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Sun, ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { supabase } from '../../lib/supabase';
-import { Banner } from '../../types/ecommerce';
 
 export const HeroBanner: React.FC = () => {
   const { banners: storeBanners, navigateToCategory, setCurrentPage } = useStore();

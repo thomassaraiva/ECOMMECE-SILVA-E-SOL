@@ -8,7 +8,6 @@ import {
   ShoppingBag, 
   LogOut, 
   ExternalLink,
-  Database,
   BarChart3,
   Archive,
   Info,
@@ -32,7 +31,6 @@ import { AdminOrdersTab } from './AdminOrdersTab';
 import { AdminAboutUsTab } from './AdminAboutUsTab';
 import { AdminSettingsTab } from './AdminSettingsTab';
 import { AdminPixelsTab } from './AdminPixelsTab';
-import { AdminSupabaseTab } from './AdminSupabaseTab';
 import { AdminProductModal } from './AdminProductModal';
 
 export type AdminTab = 
@@ -45,12 +43,11 @@ export type AdminTab =
   | 'orders' 
   | 'pixels'
   | 'about' 
-  | 'settings' 
-  | 'supabase';
+  | 'settings';
 
 export const AdminDashboard: React.FC = () => {
   const { adminUser, logout } = useAuth();
-  const { setCurrentPage, products, orders } = useStore();
+  const { setCurrentPage, products, orders, adminError, clearAdminError } = useStore();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -84,8 +81,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'orders', label: 'Pedidos WhatsApp', icon: <ShoppingBag className="w-4 h-4" />, badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined, badgeColor: 'bg-emerald-900 text-emerald-300' },
     { id: 'pixels', label: 'Pixels & Tráfego', icon: <Target className="w-4 h-4 text-[#F4803E]" /> },
     { id: 'about', label: 'Sobre a Marca', icon: <Info className="w-4 h-4" /> },
-    { id: 'settings', label: 'Configurações Loja', icon: <Settings className="w-4 h-4" /> },
-    { id: 'supabase', label: 'Banco Supabase & SQL', icon: <Database className="w-4 h-4" /> }
+    { id: 'settings', label: 'Configurações Loja', icon: <Settings className="w-4 h-4" /> }
   ];
 
   return (
@@ -145,6 +141,13 @@ export const AdminDashboard: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {adminError && (
+        <div role="alert" className="mx-4 mt-4 flex items-start justify-between gap-3 rounded-xl border border-red-700 bg-red-950 px-4 py-3 text-sm text-red-100">
+          <span>{adminError}</span>
+          <button type="button" onClick={clearAdminError} className="font-semibold underline">Fechar</button>
+        </div>
+      )}
 
       {/* Conteúdo Principal com Barra Lateral */}
       <div className="flex-1 flex flex-col md:flex-row">
@@ -252,10 +255,6 @@ export const AdminDashboard: React.FC = () => {
 
           {activeTab === 'settings' && (
             <AdminSettingsTab />
-          )}
-
-          {activeTab === 'supabase' && (
-            <AdminSupabaseTab />
           )}
         </main>
       </div>

@@ -35,7 +35,7 @@ import { Product, Category, Subcategory, SizeChart, SizeChartRow, ProductVariant
 import { useStore } from '../../context/StoreContext';
 import { getDefaultSizeChartForCategory, SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
 import { optimizeProductVariantImage, formatBytes } from '../../lib/imageOptimizer';
-import { supabase, uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
+import { uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
 
 interface AdminProductModalProps {
   isOpen: boolean;
@@ -573,81 +573,10 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         lengthCm: Number(lengthCm) || 20
       };
 
-      // Inserção direta na tabela 'products' do Supabase com tratamento resiliente de colunas
-      let supabaseCreatedId: string | undefined;
-      try {
-        const supabaseRow: Record<string, any> = {
-          name: productPayload.name,
-          slug: productPayload.slug,
-          description: productPayload.description,
-          price: productPayload.price,
-          stock_quantity: productPayload.stockQuantity,
-          category_id: productPayload.categoryId,
-          is_active: productPayload.isActive,
-          is_featured: productPayload.isFeatured,
-          is_new: productPayload.isNew,
-          is_on_sale: productPayload.isOnSale,
-          images: productPayload.images,
-          sizes: productPayload.sizes,
-          colors: productPayload.colors,
-          models: productPayload.models,
-          sku: productPayload.sku || null,
-          brand: productPayload.brand,
-          detailed_description: productPayload.detailedDescription || null,
-          promotional_price: productPayload.promotionalPrice || null,
-          subcategory_id: productPayload.subcategoryId || null,
-          video_url: productPayload.videoUrl || null,
-          size_chart: productPayload.sizeChart || null,
-          variants: productPayload.variants || null,
-          seo_title: productPayload.seoTitle || null,
-          seo_description: productPayload.seoDescription || null,
-          weight_grams: productPayload.weightGrams,
-          height_cm: productPayload.heightCm,
-          width_cm: productPayload.widthCm,
-          length_cm: productPayload.lengthCm,
-          updated_at: new Date().toISOString()
-        };
-
-        if (productToEdit) {
-          const { error: sbUpdateErr } = await supabase
-            .from('products')
-            .update(supabaseRow)
-            .eq('id', productToEdit.id);
-
-          if (sbUpdateErr && (sbUpdateErr.message?.includes('variants') || sbUpdateErr.message?.includes('column'))) {
-            // Tenta sem a coluna variants caso o schema no Supabase ainda não a tenha
-            const { variants, ...cleanRow } = supabaseRow;
-            await supabase.from('products').update(cleanRow).eq('id', productToEdit.id);
-          }
-        } else {
-          // Chamada .insert() na tabela products do Supabase
-          let { data: sbInsertData, error: sbInsertErr } = await supabase
-            .from('products')
-            .insert([supabaseRow])
-            .select();
-
-          if (sbInsertErr && (sbInsertErr.message?.includes('variants') || sbInsertErr.message?.includes('column'))) {
-            const { variants, ...cleanRow } = supabaseRow;
-            const retry = await supabase.from('products').insert([cleanRow]).select();
-            sbInsertData = retry.data;
-            sbInsertErr = retry.error;
-          }
-
-          if (sbInsertData && sbInsertData[0]?.id) {
-            supabaseCreatedId = String(sbInsertData[0].id);
-          }
-        }
-      } catch (sbErr) {
-        console.warn('Aviso de comunicação com Supabase (salvo localmente):', sbErr);
-      }
-
       if (productToEdit) {
         await updateProduct(productToEdit.id, productPayload);
       } else {
-        await addProduct({
-          ...productPayload,
-          ...(supabaseCreatedId ? { id: supabaseCreatedId } : {})
-        });
+        await addProduct(productPayload);
       }
 
       onClose();

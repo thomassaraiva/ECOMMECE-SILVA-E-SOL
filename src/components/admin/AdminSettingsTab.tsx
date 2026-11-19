@@ -7,7 +7,6 @@ import {
   Mail, 
   Truck, 
   ShieldCheck, 
-  RefreshCw,
   Sparkles,
   DollarSign,
   KeyRound,
@@ -19,7 +18,7 @@ import { useStore } from '../../context/StoreContext';
 import { useAuth } from '../../context/AuthContext';
 
 export const AdminSettingsTab: React.FC = () => {
-  const { settings, updateSettings, resetToDefaultData } = useStore();
+  const { settings, updateSettings } = useStore();
   const { currentCredentials, resetCredentials } = useAuth();
 
   const [storeName, setStoreName] = useState(settings.storeName || 'Silva e Sol');
@@ -84,14 +83,6 @@ export const AdminSettingsTab: React.FC = () => {
     }
   };
 
-  const handleReset = async () => {
-    if (confirm('Atenção: Deseja restaurar o catálogo e as configurações iniciais da Silva e Sol?')) {
-      resetToDefaultData();
-      setActionSuccess('Dados padrão restaurados!');
-      setTimeout(() => setActionSuccess(''), 3000);
-    }
-  };
-
   return (
     <div className="space-y-8">
       {/* Toast Feedback */}
@@ -112,15 +103,6 @@ export const AdminSettingsTab: React.FC = () => {
             Canais de atendimento oficiais, número do WhatsApp para pedidos, frete grátis, termos legais e credenciais de acesso.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={handleReset}
-          className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-400 hover:text-stone-200 text-xs font-semibold transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Restaurar Padrões de Fábrica</span>
-        </button>
       </div>
 
       {/* Seção de Credenciais de Acesso Administrativo */}

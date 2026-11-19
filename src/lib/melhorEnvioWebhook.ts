@@ -4,7 +4,6 @@
  */
 
 import { getSupabase } from './supabase';
-import { loadLocalStoreState, saveLocalStoreState } from './storage';
 import { sendTrackingNotificationEmail, SendEmailResult } from './resendEmail';
 import { Order } from '../types/ecommerce';
 
@@ -201,26 +200,6 @@ export async function processMelhorEnvioWebhook(
     }
   }
 
-  // 2. Se não encontrou no Supabase ou Supabase offline, buscar no armazenamento local
-  if (!matchedOrder && typeof window !== 'undefined') {
-    try {
-      const localState = loadLocalStoreState();
-      const cleanRef = orderRef.replace('#', '').toLowerCase();
-      
-      const found = localState.orders.find(o => 
-        o.id.toLowerCase() === cleanRef || 
-        (o.orderNumber && o.orderNumber.toLowerCase().includes(cleanRef)) ||
-        (cleanRef && o.id.toLowerCase().endsWith(cleanRef))
-      );
-
-      if (found) {
-        matchedOrder = found;
-      }
-    } catch (err) {
-      console.warn('[Local Order Lookup]', err);
-    }
-  }
-
   // Determinar e-mail e nome do cliente
   const finalEmail = extracted.customerEmail || matchedOrder?.customerEmail || '';
   const finalName = extracted.customerName || matchedOrder?.customerName || 'Cliente Silva e Sol';
@@ -243,33 +222,6 @@ export async function processMelhorEnvioWebhook(
       console.info(`[Supabase Order Updated] Pedido ${targetId} atualizado para status 'shipped' com rastreio ${trackingCode}`);
     } catch (err) {
       console.warn('[Supabase Order Update]', err);
-    }
-  }
-
-  // Atualizar localmente se estivermos no cliente
-  if (typeof window !== 'undefined') {
-    try {
-      const local = loadLocalStoreState();
-      let updated = false;
-      local.orders = local.orders.map(o => {
-        if (o.id === matchedOrder?.id || o.orderNumber === finalOrderNumber || (orderRef && o.id.includes(orderRef))) {
-          updated = true;
-          return {
-            ...o,
-            status: 'shipped',
-            trackingCode,
-            trackingCarrier: carrier,
-            trackingUrl,
-            shippedAt: new Date().toISOString()
-          };
-        }
-        return o;
-      });
-      if (updated) {
-        saveLocalStoreState(local);
-      }
-    } catch (err) {
-      console.warn('[Local Order Update]', err);
     }
   }
 

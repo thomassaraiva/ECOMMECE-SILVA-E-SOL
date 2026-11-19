@@ -3,9 +3,10 @@ import { useStore } from '../context/StoreContext';
 import { CatalogFilters } from '../components/catalog/CatalogFilters';
 import { ProductCard } from '../components/catalog/ProductCard';
 import { PackageOpen, Sparkles } from 'lucide-react';
+import { StoreStatus } from '../components/common/StoreStatus';
 
 export const CatalogPage: React.FC = () => {
-  const { filteredProducts, filters, categories } = useStore();
+  const { filteredProducts, filters, categories, products, isLoading, loadError, reload, settings } = useStore();
   
   const currentCategory = categories.find(c => c.id === filters.categoryId);
 
@@ -32,7 +33,15 @@ export const CatalogPage: React.FC = () => {
         <CatalogFilters totalResults={filteredProducts.length} />
 
         {/* Grade de Produtos */}
-        {filteredProducts.length > 0 ? (
+        {isLoading || loadError || products.length === 0 ? (
+          <StoreStatus
+            isLoading={isLoading}
+            loadError={loadError}
+            hasProducts={products.length > 0}
+            whatsappNumber={settings.whatsappNumber}
+            onRetry={reload}
+          />
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />

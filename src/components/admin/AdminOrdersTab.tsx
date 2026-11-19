@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShoppingBag, 
   Search, 
@@ -37,7 +37,9 @@ const STATUS_LABELS: Record<OrderStatus, { label: string; color: string; border:
 };
 
 export const AdminOrdersTab: React.FC = () => {
-  const { orders, updateOrderStatus, updateOrderTracking } = useStore();
+  const { orders, updateOrderStatus, updateOrderTracking, loadOrders } = useStore();
+
+  useEffect(() => { loadOrders().catch(() => {}); }, []);
 
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
