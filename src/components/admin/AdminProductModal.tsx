@@ -87,7 +87,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   // Aba 3: Variações & Estoque
   const [sizesStr, setSizesStr] = useState('P (38), M (40), G (42), GG (44-46)');
   const [colorsStr, setColorsStr] = useState('Verde, Azul, Branco, Preto');
-  const [modelsStr, setModelsStr] = useState('Slim Lateral 9cm, Tradicional');
+  const [modelsStr, setModelsStr] = useState('Slim Lateral 8cm, Tradicional');
   const [stockQuantity, setStockQuantity] = useState(20);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [colorImages, setColorImages] = useState<Record<string, string>>({});
@@ -194,7 +194,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setVideoUrl('');
       setSizesStr('P (38), M (40), G (42), GG (44-46)');
       setColorsStr('Verde, Azul, Branco, Preto');
-      setModelsStr('Slim Lateral 9cm, Tradicional');
+      setModelsStr('Slim Lateral 8cm, Tradicional');
       setVariants([]);
       setColorImages({});
       setHasSizeChart(true);
@@ -1336,12 +1336,12 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                       type="text"
                       value={modelsStr}
                       onChange={(e) => setModelsStr(e.target.value)}
-                      placeholder="Slim Lateral 9cm, Tradicional, Boxer"
+                      placeholder="Slim Lateral 8cm, Tradicional, Boxer"
                       className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
                     />
                     <div className="flex flex-wrap gap-1 pt-1">
                       {[
-                        { label: 'Sungas Slim (9cm)', val: 'Slim Lateral 9cm, Tradicional' },
+                        { label: 'Sungas Slim (8cm)', val: 'Slim Lateral 8cm, Tradicional' },
                         { label: 'Boxer & Tradicional', val: 'Boxer, Tradicional' },
                         { label: 'Padrão Único', val: 'Padrão' }
                       ].map((preset) => (

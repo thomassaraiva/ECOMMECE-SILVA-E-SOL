@@ -80,8 +80,7 @@ export const PoliciesPage: React.FC = () => {
               <p>{settings.returnPolicy}</p>
               <div className="space-y-2 text-xs text-stone-400 pt-2 border-t border-stone-800">
                 <p><strong>1. Direito de arrependimento:</strong> Conforme o art. 49 do Código de Defesa do Consumidor, em compras feitas fora do estabelecimento (como as online) você pode desistir da compra em até 7 (sete) dias corridos após o recebimento do produto.</p>
-                <p><strong>2. Condições das Peças:</strong> Em conformidade com as normas sanitárias de moda íntima/praia (sungas), a peça não pode ter sido lavada, usada ou apresentar odores, mantendo o protetor higiênico e tags intactas.</p>
-                <p><strong>3. Como solicitar:</strong> Basta enviar uma mensagem para nosso WhatsApp informando o número do pedido e o motivo da troca. Nossa equipe orientará o envio reverso imediatamente.</p>
+                <p><strong>2. Como solicitar:</strong> Basta enviar uma mensagem para nosso WhatsApp informando o número do pedido e o motivo da troca.</p>
               </div>
             </div>
           )}

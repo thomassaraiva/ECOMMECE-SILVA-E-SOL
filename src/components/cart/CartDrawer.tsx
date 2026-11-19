@@ -176,7 +176,7 @@ export const CartDrawer: React.FC = () => {
               )}
             </div>
 
-            {/* Rodapé do Carrinho com Checkout Stone e WhatsApp */}
+            {/* Rodapé do Carrinho: resumo e pedido pelo WhatsApp */}
             {cart.length > 0 && (
               <div className="p-4 border-t border-[#E6DDD0] bg-white space-y-3 shadow-xs">
                 

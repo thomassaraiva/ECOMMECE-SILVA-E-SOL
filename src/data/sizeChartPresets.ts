@@ -10,10 +10,10 @@ export interface SizeChartPreset {
 export const SIZE_CHART_PRESETS: SizeChartPreset[] = [
   {
     id: 'sungas',
-    name: 'Sungas (Slim Lateral 9cm, Boxer e Tradicional)',
+    name: 'Sungas (Slim Lateral 8cm, Boxer e Tradicional)',
     categoryMatch: ['cat-sungas', 'sungas'],
     chart: {
-      title: 'Tabela de Medidas Oficial - Sungas (Slim 9cm)',
+      title: 'Tabela de Medidas Oficial - Sungas (Slim 8cm)',
       columns: ['Tamanho', 'Cintura (cm)', 'Quadril (cm)', 'Lateral Slim (cm)'],
       rows: [
         { size: 'P (38)', values: ['76 - 80 cm', '90 - 94 cm', '9 cm'] },
@@ -21,7 +21,7 @@ export const SIZE_CHART_PRESETS: SizeChartPreset[] = [
         { size: 'G (42)', values: ['88 - 92 cm', '102 - 106 cm', '10 cm'] },
         { size: 'GG (44-46)', values: ['94 - 98 cm', '108 - 114 cm', '10,5 cm'] },
       ],
-      instructions: 'Passe a fita métrica em torno da cintura na altura habitual da sunga e no ponto mais largo do quadril. Nossa modelagem Slim possui lateral de 9cm para excelente caimento solar, liberdade de movimento e forro duplo com cordão interno ajustável.'
+      instructions: 'Passe a fita métrica em torno da cintura na altura habitual da sunga e no ponto mais largo do quadril. Nossa modelagem Slim possui lateral de 8cm, forro em microfibra e cordão de ajuste.'
     }
   },
   {
@@ -81,8 +81,7 @@ export const SIZE_CHART_PRESETS: SizeChartPreset[] = [
       columns: ['Item', 'Dimensão', 'Material'],
       rows: [
         { size: 'Corpo da Bolsa', values: ['42cm (largura) x 38cm (altura) x 12cm (fundo)', 'Lona de Algodão Encerada 100%'] },
-        { size: 'Alça de Ombro', values: ['60cm de extensão reforçada', 'Fita de Algodão Cru 40mm'] },
-        { size: 'Bolso Interno', values: ['20cm x 16cm com zíper anti-areia', 'Forro Hidrorrepelente'] }
+        { size: 'Alça de Ombro', values: ['60cm de extensão reforçada', 'Fita de Algodão Cru 40mm'] }
       ],
       instructions: 'Tamanho ideal para toalha de praia, protetor solar, sunga extra e garrafa d\'água.'
     }
