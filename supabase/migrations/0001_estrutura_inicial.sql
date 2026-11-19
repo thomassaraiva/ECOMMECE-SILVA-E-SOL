@@ -145,7 +145,14 @@ alter table public.products enable row level security;
 alter table public.banners enable row level security;
 alter table public.orders enable row level security;
 
--- Permissões de API (o projeto foi criado sem acesso automático a tabelas novas)
+create index products_category_id_idx on public.products (category_id);
+create index products_subcategory_id_idx on public.products (subcategory_id);
+create index subcategories_category_id_idx on public.subcategories (category_id);
+
+-- Permissões de API: tira tudo (inclusive TRUNCATE, REFERENCES e TRIGGER) e devolve só o necessário.
+-- A tabela admins fica sem nenhuma permissão para anon e authenticated.
+revoke all on all tables in schema public from anon, authenticated;
+revoke all on public.admins from anon, authenticated;
 grant select on public.store_settings, public.categories, public.subcategories, public.products, public.banners to anon, authenticated;
 grant insert, update, delete on public.store_settings, public.categories, public.subcategories, public.products, public.banners to authenticated;
 grant select, update on public.orders to authenticated;
@@ -175,13 +182,20 @@ create policy "Admin apaga banners" on public.banners for delete to authenticate
 create policy "Admin lê pedidos" on public.orders for select to authenticated using ((select public.is_admin()));
 create policy "Admin altera pedidos" on public.orders for update to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
 
--- Fotos: leitura pública pelo link (bucket público), envio e remoção só do administrador, sem listagem
+-- Fotos: leitura pública pelo link (bucket público), envio e remoção só do administrador, sem listagem pública
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
   ('products', 'products', true, 5242880, array['image/jpeg', 'image/png', 'image/webp']),
   ('banners', 'banners', true, 5242880, array['image/jpeg', 'image/png', 'image/webp']),
   ('institutional', 'institutional', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
-on conflict (id) do nothing;
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
+-- O administrador precisa ver os arquivos para apagar, mover ou substituir pela API de Storage.
+-- Visitantes continuam sem listar; abrem as fotos só pelo link público.
+create policy "Admin vê fotos" on storage.objects for select to authenticated
+  using (bucket_id in ('products', 'banners', 'institutional') and (select public.is_admin()));
 create policy "Admin envia fotos" on storage.objects for insert to authenticated
   with check (bucket_id in ('products', 'banners', 'institutional') and (select public.is_admin()));
 create policy "Admin altera fotos" on storage.objects for update to authenticated
