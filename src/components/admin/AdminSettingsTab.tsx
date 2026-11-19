@@ -8,18 +8,12 @@ import {
   Truck, 
   ShieldCheck, 
   Sparkles,
-  DollarSign,
-  KeyRound,
-  Shield,
-  Eye,
-  EyeOff
+  DollarSign
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { useAuth } from '../../context/AuthContext';
 
 export const AdminSettingsTab: React.FC = () => {
   const { settings, updateSettings } = useStore();
-  const { currentCredentials, resetCredentials } = useAuth();
 
   const [storeName, setStoreName] = useState(settings.storeName || 'Silva e Sol');
   const [storeTagline, setStoreTagline] = useState(settings.storeTagline || 'Moda Masculina Praia & Solar');
@@ -40,27 +34,9 @@ export const AdminSettingsTab: React.FC = () => {
     'Seus dados de navegação e compras são protegidos e tratados sob estritas normas de sigilo e LGPD.'
   );
 
-  // Gestão de Credenciais Administrativas
-  const [adminUsername, setAdminUsername] = useState(currentCredentials.username);
-  const [adminPassword, setAdminPassword] = useState(currentCredentials.password);
-  const [showAdminPass, setShowAdminPass] = useState(false);
-  const [credMessage, setCredMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
-
   const [isSaving, setIsSaving] = useState(false);
   const [saveErrorMsg, setSaveErrorMsg] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
-
-  const handleUpdateCredentials = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCredMessage(null);
-    const res = resetCredentials(adminUsername, adminPassword);
-    if (res.success) {
-      setCredMessage({ type: 'success', text: res.message });
-      setTimeout(() => setCredMessage(null), 4000);
-    } else {
-      setCredMessage({ type: 'error', text: res.message });
-    }
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,80 +81,9 @@ export const AdminSettingsTab: React.FC = () => {
             Configurações Gerais da Loja
           </h2>
           <p className="text-xs sm:text-sm text-stone-400">
-            Canais de atendimento oficiais, número do WhatsApp para pedidos, frete grátis, termos legais e credenciais de acesso.
+            Canais de atendimento oficiais, número do WhatsApp para pedidos, frete grátis, e termos legais.
           </p>
         </div>
-      </div>
-
-      {/* Seção de Credenciais de Acesso Administrativo */}
-      <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 space-y-4 shadow-xl">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#F4803E] flex items-center gap-2">
-            <KeyRound className="w-4 h-4" />
-            <span>Credenciais de Acesso Administrativo (Login & Senha)</span>
-          </h3>
-          <span className="text-[11px] text-stone-400">
-            Você pode alterar o usuário e a senha a qualquer momento
-          </span>
-        </div>
-
-        {credMessage && (
-          <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
-            credMessage.type === 'success'
-              ? 'bg-emerald-950/80 border border-emerald-700 text-emerald-200'
-              : 'bg-red-950/80 border border-red-700 text-red-200'
-          }`}>
-            <Check className="w-4 h-4" />
-            <span>{credMessage.text}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleUpdateCredentials} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-          <div>
-            <label className="block text-xs font-semibold text-stone-300 mb-1">
-              Usuário do Painel
-            </label>
-            <input
-              type="text"
-              required
-              value={adminUsername}
-              onChange={(e) => setAdminUsername(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs sm:text-sm focus:outline-none focus:border-[#2A8882]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-stone-300 mb-1">
-              Senha do Painel
-            </label>
-            <div className="relative">
-              <input
-                type={showAdminPass ? 'text' : 'password'}
-                required
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs sm:text-sm focus:outline-none focus:border-[#2A8882]"
-              />
-              <button
-                type="button"
-                onClick={() => setShowAdminPass(!showAdminPass)}
-                className="absolute right-3 top-3 text-stone-500 hover:text-stone-300 cursor-pointer"
-              >
-                {showAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              className="w-full py-2.5 px-4 rounded-xl bg-[#F4803E] hover:bg-[#E06D2B] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Check className="w-4 h-4" />
-              <span>Salvar Novo Login/Senha</span>
-            </button>
-          </div>
-        </form>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">

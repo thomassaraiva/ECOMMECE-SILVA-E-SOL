@@ -131,11 +131,11 @@ export const AdminDashboard: React.FC = () => {
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-900 border border-stone-800 text-xs">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-stone-300 font-medium">Logado como:</span>
-            <span className="font-bold text-white">{adminUser?.username || 'silvaesol'}</span>
+            <span className="font-bold text-white">{adminUser?.email}</span>
           </div>
 
           <button
-            onClick={() => logout()}
+            onClick={async () => { await logout(); setCurrentPage('home'); }}
             className="p-2 sm:px-3 sm:py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/60 text-red-300 hover:text-red-100 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
             title="Sair do painel administrativo"
           >
