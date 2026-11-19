@@ -14,7 +14,7 @@ import {
   Sparkles,
   Layers
 } from 'lucide-react';
-import { useStore } from '../../context/StoreContext';
+import { useStore, defaultFilters } from '../../context/StoreContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { Logo } from './Logo';
 
@@ -56,23 +56,13 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
   };
 
   const handleSelectSubcategory = (categoryId: string, subcategoryId: string) => {
-    setFilters({
-      categoryId,
-      subcategoryId,
-      searchQuery: '',
-      onlyPromotions: false,
-    });
+    setFilters({ ...defaultFilters, categoryId, subcategoryId });
     setCurrentPage('catalog');
     onClose();
   };
 
   const handleViewAllCatalog = () => {
-    setFilters({
-      categoryId: undefined,
-      subcategoryId: undefined,
-      searchQuery: '',
-      onlyPromotions: false,
-    });
+    setFilters(defaultFilters);
     setCurrentPage('catalog');
     onClose();
   };
@@ -281,12 +271,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ isOpen, onCl
               {/* Botão de Destaque para Promoções */}
               <button
                 onClick={() => {
-                  setFilters({
-                    categoryId: undefined,
-                    subcategoryId: undefined,
-                    searchQuery: '',
-                    onlyPromotions: true,
-                  });
+                  setFilters({ ...defaultFilters, onlyPromotions: true });
                   setCurrentPage('catalog');
                   onClose();
                 }}
