@@ -2030,7 +2030,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                                     const val = e.target.value;
                                     setSizeChartRows(prev => prev.map((r, i) => i === rowIdx ? { ...r, size: val } : r));
                                   }}
-                                  className="w-16 px-2 py-1 bg-stone-900 border border-stone-800 rounded text-center font-bold text-amber-400 text-xs"
+                                  className="w-full min-w-16 px-2 py-1 bg-stone-900 border border-stone-800 rounded text-center font-bold text-amber-400 text-xs"
                                 />
                               </td>
                               {row.values.map((val, valIdx) => (
