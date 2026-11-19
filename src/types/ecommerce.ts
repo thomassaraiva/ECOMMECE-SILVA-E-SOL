@@ -147,6 +147,9 @@ export interface StoreSettings {
   whatsappNumber: string; // Ex: '5581920019982'
   instagramHandle?: string;
   contactEmail?: string;
+  legalName?: string;
+  cnpj?: string;
+  address?: string;
   aboutTitle?: string;
   aboutText?: string;
   aboutMission?: string;
