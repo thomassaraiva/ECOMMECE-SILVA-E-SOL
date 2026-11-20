@@ -10,7 +10,7 @@ export const WhatsAppFloat: React.FC = () => {
   const whatsappUrl = `https://wa.me/${rawNumber}?text=${defaultText}`;
 
   return (
-    <aside aria-label="Atendimento rápido WhatsApp">
+    <aside aria-label="Atendimento pelo WhatsApp">
       <a
         id="btn-whatsapp-floating"
         href={whatsappUrl}

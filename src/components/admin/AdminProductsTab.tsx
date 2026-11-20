@@ -1,24 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Copy, 
-  Trash2, 
-  Check, 
-  X, 
-  Percent, 
-  AlertCircle,
+import {
+  Package,
+  Plus,
+  Search,
+  Edit,
+  Copy,
+  Trash2,
+  Check,
+  X,
   Eye,
   EyeOff,
-  Sparkles,
-  ExternalLink,
-  ChevronDown
+  ExternalLink
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Product } from '../../types/ecommerce';
+import { formatBRL } from '../../lib/format';
 
 interface AdminProductsTabProps {
   onOpenNewProduct: () => void;
@@ -90,15 +86,23 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   }, [products, searchQuery, selectedCategory, statusFilter, promoFilter, stockFilter]);
 
   const handleDuplicate = async (prod: Product) => {
-    const duplicated = await duplicateProduct(prod.id);
-    if (duplicated) {
-      triggerSuccess(`Produto "${prod.name}" duplicado com sucesso!`);
+    try {
+      const duplicated = await duplicateProduct(prod.id);
+      if (duplicated) {
+        triggerSuccess(`Produto "${prod.name}" duplicado com sucesso!`);
+      }
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
     }
   };
 
   const handleToggleStatus = async (prod: Product) => {
-    await toggleProductStatus(prod.id);
-    triggerSuccess(`Status do produto alterado para ${!prod.isActive ? 'Ativo' : 'Inativo'}.`);
+    try {
+      await toggleProductStatus(prod.id);
+      triggerSuccess(`Status do produto alterado para ${!prod.isActive ? 'Ativo' : 'Inativo'}.`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
   };
 
   const confirmDelete = async () => {
@@ -108,6 +112,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       await deleteProduct(productToDelete.id);
       triggerSuccess(`Produto "${productToDelete.name}" removido com sucesso.`);
       setProductToDelete(null);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
     } finally {
       setIsDeleting(false);
     }
@@ -314,15 +320,15 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           {product.isOnSale && product.promotionalPrice ? (
                             <div>
                               <span className="text-emerald-400 font-bold block">
-                                R$ {product.promotionalPrice.toFixed(2).replace('.', ',')}
+                                {formatBRL(product.promotionalPrice)}
                               </span>
                               <span className="text-stone-500 line-through text-[11px]">
-                                R$ {product.price.toFixed(2).replace('.', ',')}
+                                {formatBRL(product.price)}
                               </span>
                             </div>
                           ) : (
                             <span className="text-white font-semibold">
-                              R$ {product.price.toFixed(2).replace('.', ',')}
+                              {formatBRL(product.price)}
                             </span>
                           )}
                         </div>

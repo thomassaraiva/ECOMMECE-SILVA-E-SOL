@@ -3,6 +3,9 @@ import { X, Heart, ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
 import { useWishlist } from '../../context/WishlistContext';
 import { useCart } from '../../context/CartContext';
 import { useStore } from '../../context/StoreContext';
+import { PRODUCT_IMAGE_FALLBACK } from '../../lib/placeholders';
+import { formatBRL } from '../../lib/format';
+import { effectivePrice } from '../../lib/pricing';
 
 export const WishlistDrawer: React.FC = () => {
   const { wishlist, removeFromWishlist, clearWishlist, isWishlistOpen, setIsWishlistOpen } = useWishlist();
@@ -73,8 +76,8 @@ export const WishlistDrawer: React.FC = () => {
               </div>
             ) : (
               wishlist.map((item) => {
-                const hasDiscount = item.isOnSale && item.promotionalPrice && item.promotionalPrice < item.price;
-                const effectivePrice = hasDiscount ? item.promotionalPrice! : item.price;
+                const unitPrice = item.isOnSale ? effectivePrice(item) : item.price;
+                const hasDiscount = unitPrice < item.price;
 
                 return (
                   <div
@@ -91,7 +94,7 @@ export const WishlistDrawer: React.FC = () => {
                       className="w-18 h-22 rounded-lg overflow-hidden bg-[#F4EFE6] shrink-0 relative group"
                     >
                       <img
-                        src={item.images[0] || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80'}
+                        src={item.images[0] || PRODUCT_IMAGE_FALLBACK}
                         alt={item.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         referrerPolicy="no-referrer"
@@ -113,11 +116,11 @@ export const WishlistDrawer: React.FC = () => {
 
                       <div className="flex items-baseline gap-2 mt-1">
                         <span className="font-bold text-sm text-[#2A8882]">
-                          R$ {effectivePrice.toFixed(2).replace('.', ',')}
+                          {formatBRL(unitPrice)}
                         </span>
                         {hasDiscount && (
                           <span className="text-[11px] text-[#9E9484] line-through">
-                            R$ {item.price.toFixed(2).replace('.', ',')}
+                            {formatBRL(item.price)}
                           </span>
                         )}
                       </div>
@@ -134,7 +137,7 @@ export const WishlistDrawer: React.FC = () => {
                       <div className="flex items-center gap-2 mt-2.5">
                         <button
                           onClick={() => {
-                            addToCart(item, 1, item.sizes[0], item.colors[0]);
+                            addToCart(item, item.sizes[0], item.colors[0], undefined, 1);
                             setIsWishlistOpen(false);
                             setIsCartOpen(true);
                           }}

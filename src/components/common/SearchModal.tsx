@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, ArrowRight, Tag } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { formatBRL } from '../../lib/format';
+import { effectivePrice } from '../../lib/pricing';
 
 export const SearchModal: React.FC = () => {
   const { searchModalOpen, setSearchModalOpen, products, navigateToProduct } = useStore();
@@ -56,7 +58,7 @@ export const SearchModal: React.FC = () => {
               Buscas Populares
             </p>
             <div className="flex flex-wrap gap-2">
-              {['Sunga Tradicional', 'Sunga Slim', 'Camiseta Algodão Nobre', 'Short Linho', 'Regata Canelada', 'Verde Costeiro'].map((term) => (
+              {['Sunga Tradicional', 'Sunga Slim', 'Camiseta', 'Short Linho', 'Regata Canelada', 'Verde Costeiro'].map((term) => (
                 <button
                   key={term}
                   onClick={() => setQuery(term)}
@@ -103,7 +105,7 @@ export const SearchModal: React.FC = () => {
                       {product.description}
                     </p>
                     <span className="text-xs font-bold text-[#2A8882] mt-0.5 inline-block">
-                      R$ {(product.promotionalPrice || product.price).toFixed(2).replace('.', ',')}
+                      {formatBRL(product.isOnSale ? effectivePrice(product) : product.price)}
                     </span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-[#8A8072] group-hover:text-[#2A8882] group-hover:translate-x-1 transition-all" />

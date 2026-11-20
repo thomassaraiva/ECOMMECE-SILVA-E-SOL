@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, Product, StoreSettings } from '../types/ecommerce';
-import { StoreService } from '../lib/storage';
+import { buildWhatsAppOrderUrl } from '../lib/whatsappOrder';
 import { trackAddToCart, trackInitiateCheckout } from '../lib/analytics';
+import { PRODUCT_IMAGE_FALLBACK } from '../lib/placeholders';
+import { effectivePrice } from '../lib/pricing';
+import { reconcileCart } from '../lib/cartReconcile';
+import { useStore } from './StoreContext';
 
 interface CartContextType {
   cart: CartItem[];
@@ -11,8 +15,6 @@ interface CartContextType {
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
-  freeShippingThreshold: number;
-  remainingForFreeShipping: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   checkoutWhatsApp: (settings: StoreSettings, customerNotes?: string, customerName?: string, customerCity?: string) => void;
@@ -20,11 +22,12 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_STORAGE_KEY = 'silva_e_sol_cart_v1';
+const CART_STORAGE_KEY = 'silva_e_sol_cart_v2';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
+      localStorage.removeItem('silva_e_sol_cart_v1'); // sacola antiga, com itens de demonstração
       const saved = localStorage.getItem(CART_STORAGE_KEY);
       return saved ? JSON.parse(saved) : [];
     } catch {
@@ -33,6 +36,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const { products, isLoading, loadError } = useStore();
+
+  // Quando a loja carrega, tira itens que não estão mais à venda e atualiza os preços
+  useEffect(() => {
+    if (isLoading || loadError || !products) return;
+    setCart(prev => reconcileCart(prev, products));
+  }, [products, isLoading, loadError]);
 
   useEffect(() => {
     try {
@@ -71,12 +81,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           productId: product.id,
           name: product.name,
           price: product.price,
-          promotionalPrice: product.promotionalPrice,
+          // Só leva a promoção que a vitrine mostra (produto marcado em oferta)
+          promotionalPrice: product.isOnSale ? product.promotionalPrice : undefined,
           selectedSize: s,
           selectedColor: c,
           selectedModel: m,
           quantity: Math.min(quantity, product.stockQuantity || 99),
-          image: product.images[0] || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+          image: product.images[0] || PRODUCT_IMAGE_FALLBACK,
           maxStock: product.stockQuantity || 99,
           weightGrams: product.weightGrams ?? 200,
           heightCm: product.heightCm ?? 4,
@@ -119,15 +130,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  const subtotal = cart.reduce((acc, item) => {
-    const unitPrice = item.promotionalPrice && item.promotionalPrice < item.price 
-      ? item.promotionalPrice 
-      : item.price;
-    return acc + unitPrice * item.quantity;
-  }, 0);
-
-  const freeShippingThreshold = 299;
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
+  const subtotal = cart.reduce((acc, item) => acc + effectivePrice(item) * item.quantity, 0);
 
   const checkoutWhatsApp = (
     settings: StoreSettings, 
@@ -140,83 +143,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Disparar evento InitiateCheckout para Meta, TikTok e GA4
     trackInitiateCheckout(cart, subtotal);
 
-    const orderNumber = `SES-${Date.now().toString().slice(-6)}`;
-    const phone = settings.whatsappNumber.replace(/\D/g, '') || '5581920019982';
-
-    // Construção profissional e organizada da mensagem conforme Seção 13
-    let msg = `☀️ *PEDIDO SILVA E SOL - ${orderNumber}*\n`;
-    msg += `Olá! Gostaria de fechar meu pedido na loja oficial Silva e Sol.\n\n`;
-
-    if (customerName) {
-      msg += `👤 *Cliente:* ${customerName}\n`;
-    }
-    if (customerCity) {
-      msg += `📍 *Cidade/UF:* ${customerCity}\n`;
-    }
-    msg += `------------------------------------\n`;
-    msg += `📦 *ITENS DO PEDIDO:*\n\n`;
-
-    cart.forEach((item, index) => {
-      const effectivePrice = item.promotionalPrice || item.price;
-      const itemSubtotal = effectivePrice * item.quantity;
-      msg += `${index + 1}. *${item.name}*\n`;
-      
-      const details: string[] = [];
-      if (item.selectedSize) details.push(`Tamanho: ${item.selectedSize}`);
-      if (item.selectedColor) details.push(`Cor: ${item.selectedColor}`);
-      if (item.selectedModel) details.push(`Modelo: ${item.selectedModel}`);
-      
-      if (details.length > 0) {
-        msg += `   └ ${details.join(' | ')}\n`;
-      }
-      msg += `   └ Qtd: ${item.quantity} un. x R$ ${effectivePrice.toFixed(2).replace('.', ',')} = *R$ ${itemSubtotal.toFixed(2).replace('.', ',')}*\n\n`;
-    });
-
-    msg += `------------------------------------\n`;
-    msg += `💰 *SUBTOTAL:* R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
-    
-    if (subtotal >= freeShippingThreshold) {
-      msg += `🚚 *FRETE:* Benefício Frete Grátis Qualificado! (Consulte CEP)\n`;
-    } else {
-      msg += `🚚 *FRETE:* A calcular para meu CEP\n`;
-    }
-    msg += `⭐ *TOTAL ESTIMADO:* R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
-
-    if (customerNotes && customerNotes.trim()) {
-      msg += `\n📝 *Observações:* ${customerNotes.trim()}\n`;
-    }
-
-    msg += `\nAguardo as instruções para pagamento via Pix/Cartão e envio. Obrigado! ☀️🌊`;
-
-    // Gravar pedido no histórico
-    StoreService.saveOrder({
-      id: orderNumber,
-      orderNumber,
-      customerName: customerName || 'Cliente WhatsApp',
-      customerPhone: '',
-      customerCity: customerCity || '',
-      customerNotes: customerNotes || '',
-      subtotal,
-      discount: 0,
-      total: subtotal,
-      status: 'pending_whatsapp',
-      items: cart.map(i => ({
-        id: i.id,
-        productId: i.productId,
-        productName: i.name,
-        size: i.selectedSize,
-        color: i.selectedColor,
-        model: i.selectedModel,
-        quantity: i.quantity,
-        unitPrice: i.promotionalPrice || i.price,
-        subtotal: (i.promotionalPrice || i.price) * i.quantity
-      })),
-      createdAt: new Date().toISOString()
-    });
-
-    // Abrir WhatsApp diretamente
-    const encoded = encodeURIComponent(msg);
-    const url = `https://wa.me/${phone}?text=${encoded}`;
+    const url = buildWhatsAppOrderUrl(cart, settings, { customerName, customerCity, customerNotes });
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -230,8 +157,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearCart,
         totalItems,
         subtotal,
-        freeShippingThreshold,
-        remainingForFreeShipping,
         isCartOpen,
         setIsCartOpen,
         checkoutWhatsApp

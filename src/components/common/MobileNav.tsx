@@ -7,7 +7,7 @@ import { useWishlist } from '../../context/WishlistContext';
 export const MobileNav: React.FC = () => {
   const { currentPage, setCurrentPage } = useStore();
   const { totalItems, setIsCartOpen } = useCart();
-  const { totalWishlist, setIsWishlistOpen } = useWishlist();
+  const { totalWishlistItems, setIsWishlistOpen } = useWishlist();
 
   const isHome = currentPage === 'home';
   const isCatalog = currentPage === 'catalog';
@@ -54,9 +54,9 @@ export const MobileNav: React.FC = () => {
         aria-label="Lista de Desejos"
       >
         <Heart className="w-5 h-5" />
-        {totalWishlist > 0 && (
+        {totalWishlistItems > 0 && (
           <span className="absolute top-1 right-2 bg-[#F4803E] text-white font-bold text-[9.5px] w-4 h-4 rounded-full flex items-center justify-center shadow-2xs">
-            {totalWishlist}
+            {totalWishlistItems}
           </span>
         )}
         <span className="text-[10px] mt-0.5">Desejos</span>

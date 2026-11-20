@@ -1,19 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Layers, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  EyeOff, 
-  Upload, 
-  Check, 
-  X, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Upload,
+  Check,
+  X,
   FolderPlus,
   Image as ImageIcon
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { Category, Subcategory } from '../../types/ecommerce';
+import { Category } from '../../types/ecommerce';
 
 export const AdminCategoriesTab: React.FC = () => {
   const { 
@@ -43,6 +40,8 @@ export const AdminCategoriesTab: React.FC = () => {
   const [subcatName, setSubcatName] = useState('');
   const [selectedCatForSubcat, setSelectedCatForSubcat] = useState(categories[0]?.id || '');
   const [actionSuccess, setActionSuccess] = useState('');
+  const [catErrorMsg, setCatErrorMsg] = useState('');
+  const [subcatErrorMsg, setSubcatErrorMsg] = useState('');
 
   const triggerSuccess = (msg: string) => {
     setActionSuccess(msg);
@@ -83,6 +82,7 @@ export const AdminCategoriesTab: React.FC = () => {
     setCatDescription('');
     setCatImageUrl('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80');
     setCatOrder(categories.length + 1);
+    setCatErrorMsg('');
     setIsModalOpen(true);
   };
 
@@ -93,6 +93,7 @@ export const AdminCategoriesTab: React.FC = () => {
     setCatDescription(cat.description || '');
     setCatImageUrl(cat.imageUrl || '');
     setCatOrder(cat.order || 1);
+    setCatErrorMsg('');
     setIsModalOpen(true);
   };
 
@@ -102,28 +103,34 @@ export const AdminCategoriesTab: React.FC = () => {
 
     const slug = catSlug.trim() || catName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-    if (editingCategory) {
-      await updateCategory(editingCategory.id, {
-        name: catName.trim(),
-        slug,
-        description: catDescription.trim() || undefined,
-        imageUrl: catImageUrl.trim() || undefined,
-        order: catOrder
-      });
-      triggerSuccess(`Categoria "${catName}" atualizada.`);
-    } else {
-      await addCategory({
-        name: catName.trim(),
-        slug,
-        description: catDescription.trim() || undefined,
-        imageUrl: catImageUrl.trim() || undefined,
-        order: catOrder,
-        isActive: true
-      });
-      triggerSuccess(`Categoria "${catName}" criada com sucesso.`);
-    }
+    setCatErrorMsg('');
+    try {
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, {
+          name: catName.trim(),
+          slug,
+          description: catDescription.trim() || undefined,
+          imageUrl: catImageUrl.trim() || undefined,
+          order: catOrder
+        });
+        triggerSuccess(`Categoria "${catName}" atualizada.`);
+      } else {
+        await addCategory({
+          name: catName.trim(),
+          slug,
+          description: catDescription.trim() || undefined,
+          imageUrl: catImageUrl.trim() || undefined,
+          order: catOrder,
+          isActive: true
+        });
+        triggerSuccess(`Categoria "${catName}" criada com sucesso.`);
+      }
 
-    setIsModalOpen(false);
+      setIsModalOpen(false);
+    } catch (err: any) {
+      // O modal continua aberto com os dados digitados; a mensagem aparece junto ao botão.
+      setCatErrorMsg(err.message || 'Não foi possível salvar a categoria.');
+    }
   };
 
   const handleAddSubcat = async (e: React.FormEvent) => {
@@ -131,14 +138,19 @@ export const AdminCategoriesTab: React.FC = () => {
     if (!subcatName.trim() || !selectedCatForSubcat) return;
 
     const slug = subcatName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    await addSubcategory({
-      categoryId: selectedCatForSubcat,
-      name: subcatName.trim(),
-      slug
-    });
-
-    setSubcatName('');
-    triggerSuccess('Subcategoria adicionada com sucesso.');
+    setSubcatErrorMsg('');
+    try {
+      await addSubcategory({
+        categoryId: selectedCatForSubcat,
+        name: subcatName.trim(),
+        slug
+      });
+      setSubcatName('');
+      triggerSuccess('Subcategoria adicionada com sucesso.');
+    } catch (err: any) {
+      // O nome digitado fica no campo; a mensagem aparece junto ao botão.
+      setSubcatErrorMsg(err.message || 'Não foi possível salvar a subcategoria.');
+    }
   };
 
   return (
@@ -204,7 +216,7 @@ export const AdminCategoriesTab: React.FC = () => {
                   </span>
 
                   <button
-                    onClick={() => toggleCategoryStatus(cat.id)}
+                    onClick={() => toggleCategoryStatus(cat.id).catch(() => { /* só evita a rejeição não tratada: o erro aparece na faixa do painel (runAdmin) */ })}
                     className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-colors cursor-pointer ${
                       cat.isActive
                         ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800'
@@ -250,7 +262,7 @@ export const AdminCategoriesTab: React.FC = () => {
                         >
                           <span>{sub.name}</span>
                           <button
-                            onClick={() => deleteSubcategory(sub.id)}
+                            onClick={() => deleteSubcategory(sub.id).catch(() => { /* só evita a rejeição não tratada: o erro aparece na faixa do painel (runAdmin) */ })}
                             className="text-stone-500 hover:text-red-400"
                             title="Remover subcategoria"
                           >
@@ -274,7 +286,7 @@ export const AdminCategoriesTab: React.FC = () => {
                   <button
                     onClick={() => {
                       if (confirm(`Excluir categoria "${cat.name}"?`)) {
-                        deleteCategory(cat.id);
+                        deleteCategory(cat.id).catch(() => { /* só evita a rejeição não tratada: o erro aparece na faixa do painel (runAdmin) */ });
                       }
                     }}
                     className="p-1.5 rounded-xl text-stone-500 hover:text-red-400 hover:bg-stone-800 transition-colors cursor-pointer"
@@ -332,6 +344,11 @@ export const AdminCategoriesTab: React.FC = () => {
               + Adicionar
             </button>
           </div>
+          {subcatErrorMsg && (
+            <div role="alert" className="sm:col-span-12 p-3.5 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs">
+              {subcatErrorMsg}
+            </div>
+          )}
         </form>
       </div>
 
@@ -441,6 +458,12 @@ export const AdminCategoriesTab: React.FC = () => {
                   className="w-full p-3 rounded-xl bg-stone-950 border border-stone-800 text-white focus:outline-none focus:border-[#2A8882]"
                 />
               </div>
+
+              {catErrorMsg && (
+                <div role="alert" className="p-3.5 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs">
+                  {catErrorMsg}
+                </div>
+              )}
 
               <div className="pt-3 border-t border-stone-800 flex items-center justify-end gap-2">
                 <button

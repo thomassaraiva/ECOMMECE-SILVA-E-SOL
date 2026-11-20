@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, RefreshCw, Truck, Lock, ArrowLeft } from 'lucide-react';
+import { RefreshCw, Truck, Lock, ArrowLeft } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
 export const PoliciesPage: React.FC = () => {
@@ -79,9 +79,8 @@ export const PoliciesPage: React.FC = () => {
               </h2>
               <p>{settings.returnPolicy}</p>
               <div className="space-y-2 text-xs text-stone-400 pt-2 border-t border-stone-800">
-                <p><strong>1. Prazo:</strong> Conforme o Código de Defesa do Consumidor, você tem até 7 (sete) dias corridos a partir da data de entrega para solicitar a troca ou desistência.</p>
-                <p><strong>2. Condições das Peças:</strong> Em conformidade com as normas sanitárias de moda íntima/praia (sungas), a peça não pode ter sido lavada, usada ou apresentar odores, mantendo o protetor higiênico e tags intactas.</p>
-                <p><strong>3. Como solicitar:</strong> Basta enviar uma mensagem para nosso WhatsApp informando o número do pedido e o motivo da troca. Nossa equipe orientará o envio reverso imediatamente.</p>
+                <p><strong>1. Direito de arrependimento:</strong> Conforme o art. 49 do Código de Defesa do Consumidor, em compras feitas fora do estabelecimento (como as online) você pode desistir da compra em até 7 (sete) dias corridos após o recebimento do produto.</p>
+                <p><strong>2. Como solicitar:</strong> Basta enviar uma mensagem para nosso WhatsApp informando o número do pedido e o motivo da troca.</p>
               </div>
             </div>
           )}
@@ -94,9 +93,8 @@ export const PoliciesPage: React.FC = () => {
               </h2>
               <p>{settings.shippingPolicy}</p>
               <div className="space-y-2 text-xs text-stone-400 pt-2 border-t border-stone-800">
-                <p><strong>Postagem Rápida:</strong> Os pedidos com pagamento confirmado são separados e postados em até 1 a 2 dias úteis.</p>
+                <p><strong>Prazo e Detalhes:</strong> Os detalhes do envio e o prazo são informados pelo WhatsApp no momento da compra.</p>
                 <p><strong>Código de Rastreio:</strong> Assim que a encomenda for despachada, você recebe o código de rastreamento oficial no WhatsApp para acompanhar cada etapa da entrega.</p>
-                <p><strong>Frete Grátis:</strong> Compras acima do valor qualificado ganham benefício especial de frete gratuito.</p>
               </div>
             </div>
           )}

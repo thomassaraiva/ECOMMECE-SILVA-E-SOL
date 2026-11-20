@@ -1,25 +1,20 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Image as ImageIcon, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  EyeOff, 
-  ExternalLink, 
-  Check, 
-  X, 
-  Smartphone, 
+import {
+  Image as ImageIcon,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  Check,
+  X,
+  Smartphone,
   Monitor,
-  Database,
   Upload,
   Zap,
-  Sparkles,
   RefreshCw,
   Sliders,
   ArrowRight,
-  Info,
-  Layers,
   ArrowUp,
   ArrowDown,
   Maximize2,
@@ -28,10 +23,10 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { Banner } from '../../types/ecommerce';
 import { formatBytes, optimizeBannerImage } from '../../lib/imageOptimizer';
-import { supabase, uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
+import { uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
 
 export const AdminBannersTab: React.FC = () => {
-  const { banners, categories, products, addBanner, updateBanner, deleteBanner, toggleBannerStatus } = useStore();
+  const { banners, addBanner, updateBanner, deleteBanner, toggleBannerStatus } = useStore();
 
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -137,10 +132,10 @@ export const AdminBannersTab: React.FC = () => {
       setImageUrl(finalUrl);
       setDesktopFileInfo({
         name: file.name,
-        sizeFormatted: formatBytes(optimized.estimatedSize),
+        sizeFormatted: formatBytes(optimized.compressedSize),
         type: 'image/webp'
       });
-      triggerSuccess(`Banner Desktop otimizado e anexado (${formatBytes(optimized.estimatedSize)})!`);
+      triggerSuccess(`Banner Desktop otimizado e anexado (${formatBytes(optimized.compressedSize)})!`);
     } catch (err: any) {
       alert('Falha ao processar arquivo: ' + err.message);
     } finally {
@@ -177,10 +172,10 @@ export const AdminBannersTab: React.FC = () => {
       setMobileImageUrl(finalUrl);
       setMobileFileInfo({
         name: file.name,
-        sizeFormatted: formatBytes(optimized.estimatedSize),
+        sizeFormatted: formatBytes(optimized.compressedSize),
         type: 'image/webp'
       });
-      triggerSuccess(`Banner Mobile otimizado e anexado (${formatBytes(optimized.estimatedSize)})!`);
+      triggerSuccess(`Banner Mobile otimizado e anexado (${formatBytes(optimized.compressedSize)})!`);
     } catch (err: any) {
       alert('Falha ao processar imagem mobile: ' + err.message);
     } finally {
@@ -411,7 +406,7 @@ export const AdminBannersTab: React.FC = () => {
                 {/* Ações */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => toggleBannerStatus(banner.id)}
+                    onClick={() => toggleBannerStatus(banner.id).catch(() => { /* só evita a rejeição não tratada: o erro aparece na faixa do painel (runAdmin) */ })}
                     className="p-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                     title="Ativar ou desativar exibição"
                   >
@@ -430,8 +425,9 @@ export const AdminBannersTab: React.FC = () => {
                   <button
                     onClick={() => {
                       if (confirm(`Deseja realmente excluir o banner "${banner.title}"?`)) {
-                        deleteBanner(banner.id);
-                        triggerSuccess('Banner removido.');
+                        deleteBanner(banner.id)
+                          .then(() => triggerSuccess('Banner removido.'))
+                          .catch(() => { /* só evita a rejeição não tratada: o erro aparece na faixa do painel (runAdmin) */ });
                       }
                     }}
                     className="p-2.5 rounded-xl text-stone-500 hover:text-red-400 hover:bg-stone-800 transition-colors cursor-pointer"
@@ -497,7 +493,7 @@ export const AdminBannersTab: React.FC = () => {
                     type="text"
                     value={subtitle}
                     onChange={(e) => setSubtitle(e.target.value)}
-                    placeholder="Ex: Sungas com proteção UV50+ e secagem ultra-rápida"
+                    placeholder="Ex.: Sunga em poliéster com elastano, forro em microfibra."
                     className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs sm:text-sm focus:outline-none focus:border-[#2A8882]"
                   />
                 </div>

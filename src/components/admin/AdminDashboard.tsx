@@ -1,20 +1,18 @@
-import React, { useState } from 'react';
-import { 
-  Package, 
-  Layers, 
-  Image as ImageIcon, 
-  Tag, 
-  Settings, 
-  ShoppingBag, 
-  LogOut, 
+import React, { useState, useEffect } from 'react';
+import {
+  Package,
+  Layers,
+  Image as ImageIcon,
+  Tag,
+  Settings,
+  ShoppingBag,
+  LogOut,
   ExternalLink,
-  Database,
   BarChart3,
   Archive,
   Info,
   Menu,
   X,
-  Sparkles,
   Sun,
   Target
 } from 'lucide-react';
@@ -31,8 +29,6 @@ import { AdminPromotionsTab } from './AdminPromotionsTab';
 import { AdminOrdersTab } from './AdminOrdersTab';
 import { AdminAboutUsTab } from './AdminAboutUsTab';
 import { AdminSettingsTab } from './AdminSettingsTab';
-import { AdminPixelsTab } from './AdminPixelsTab';
-import { AdminSupabaseTab } from './AdminSupabaseTab';
 import { AdminProductModal } from './AdminProductModal';
 
 export type AdminTab = 
@@ -45,12 +41,15 @@ export type AdminTab =
   | 'orders' 
   | 'pixels'
   | 'about' 
-  | 'settings' 
-  | 'supabase';
+  | 'settings';
 
 export const AdminDashboard: React.FC = () => {
   const { adminUser, logout } = useAuth();
-  const { setCurrentPage, products, orders } = useStore();
+  const { setCurrentPage, products, orders, adminError, clearAdminError, loadOrders, clearAdminData, reload } = useStore();
+
+  // Ao abrir o painel: pedidos para os contadores e a loja de novo, agora com os itens inativos que só o admin vê.
+  // O erro já aparece na faixa global.
+  useEffect(() => { loadOrders().catch(() => {}); reload(); }, []);
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -84,8 +83,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'orders', label: 'Pedidos WhatsApp', icon: <ShoppingBag className="w-4 h-4" />, badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined, badgeColor: 'bg-emerald-900 text-emerald-300' },
     { id: 'pixels', label: 'Pixels & Tráfego', icon: <Target className="w-4 h-4 text-[#F4803E]" /> },
     { id: 'about', label: 'Sobre a Marca', icon: <Info className="w-4 h-4" /> },
-    { id: 'settings', label: 'Configurações Loja', icon: <Settings className="w-4 h-4" /> },
-    { id: 'supabase', label: 'Banco Supabase & SQL', icon: <Database className="w-4 h-4" /> }
+    { id: 'settings', label: 'Configurações Loja', icon: <Settings className="w-4 h-4" /> }
   ];
 
   return (
@@ -132,11 +130,11 @@ export const AdminDashboard: React.FC = () => {
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-900 border border-stone-800 text-xs">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-stone-300 font-medium">Logado como:</span>
-            <span className="font-bold text-white">{adminUser?.username || 'silvaesol'}</span>
+            <span className="font-bold text-white">{adminUser?.email}</span>
           </div>
 
           <button
-            onClick={() => logout()}
+            onClick={async () => { await logout(); clearAdminData(); reload(); setCurrentPage('home'); }}
             className="p-2 sm:px-3 sm:py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/60 text-red-300 hover:text-red-100 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
             title="Sair do painel administrativo"
           >
@@ -145,6 +143,13 @@ export const AdminDashboard: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {adminError && (
+        <div role="alert" className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-xl flex items-start justify-between gap-3 rounded-xl border border-red-700 bg-red-950 px-4 py-3 text-sm text-red-100 shadow-2xl">
+          <span>{adminError}</span>
+          <button type="button" onClick={clearAdminError} className="font-semibold underline">Fechar</button>
+        </div>
+      )}
 
       {/* Conteúdo Principal com Barra Lateral */}
       <div className="flex-1 flex flex-col md:flex-row">
@@ -243,7 +248,10 @@ export const AdminDashboard: React.FC = () => {
           )}
 
           {activeTab === 'pixels' && (
-            <AdminPixelsTab />
+            // Pixels não têm coluna no banco e dependem do aviso de cookies: a aba fica só informativa
+            <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 text-sm text-stone-300">
+              Os pixels de anúncio serão ativados junto com o aviso de cookies (etapa S4).
+            </div>
           )}
 
           {activeTab === 'about' && (
@@ -252,10 +260,6 @@ export const AdminDashboard: React.FC = () => {
 
           {activeTab === 'settings' && (
             <AdminSettingsTab />
-          )}
-
-          {activeTab === 'supabase' && (
-            <AdminSupabaseTab />
           )}
         </main>
       </div>

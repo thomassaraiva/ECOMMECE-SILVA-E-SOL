@@ -3,10 +3,12 @@ import { useStore } from '../context/StoreContext';
 import { CatalogFilters } from '../components/catalog/CatalogFilters';
 import { ProductCard } from '../components/catalog/ProductCard';
 import { PackageOpen, Sparkles } from 'lucide-react';
+import { StoreStatus } from '../components/common/StoreStatus';
 
 export const CatalogPage: React.FC = () => {
-  const { filteredProducts, filters, categories } = useStore();
+  const { filteredProducts, filters, categories, products, isLoading, loadError, reload, settings } = useStore();
   
+  const hasActiveProducts = products.some(p => p.isActive);
   const currentCategory = categories.find(c => c.id === filters.categoryId);
 
   return (
@@ -24,7 +26,7 @@ export const CatalogPage: React.FC = () => {
             {currentCategory ? currentCategory.name : 'Catálogo Completo'}
           </h1>
           <p className="text-xs sm:text-sm text-[#736A5E] max-w-xl">
-            Peças desenvolvidas com tecidos nobres, modelagens confortáveis e a vibração autêntica do sol brasileiro.
+            Peças com modelagens confortáveis e a vibração autêntica do sol brasileiro.
           </p>
         </div>
 
@@ -32,7 +34,15 @@ export const CatalogPage: React.FC = () => {
         <CatalogFilters totalResults={filteredProducts.length} />
 
         {/* Grade de Produtos */}
-        {filteredProducts.length > 0 ? (
+        {isLoading || loadError || !hasActiveProducts ? (
+          <StoreStatus
+            isLoading={isLoading}
+            loadError={loadError}
+            hasProducts={hasActiveProducts}
+            whatsappNumber={settings.whatsappNumber}
+            onRetry={reload}
+          />
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />

@@ -1,15 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Suporte universal para Next.js (process.env.NEXT_PUBLIC_*) e Vite (import.meta.env.*)
-const supabaseUrl = 
-  (typeof process !== 'undefined' && process.env && (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL)) ||
-  ((import.meta as any)?.env?.NEXT_PUBLIC_SUPABASE_URL || (import.meta as any)?.env?.VITE_SUPABASE_URL) ||
-  '';
-
-const supabaseAnonKey = 
-  (typeof process !== 'undefined' && process.env && (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY)) ||
-  ((import.meta as any)?.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (import.meta as any)?.env?.VITE_SUPABASE_ANON_KEY) ||
-  '';
+const supabaseUrl: string = import.meta.env.VITE_SUPABASE_URL ?? '';
+const supabaseAnonKey: string = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && 
@@ -33,7 +25,8 @@ export function getSupabase(): SupabaseClient | null {
 }
 
 /**
- * Upload seguro de imagem para bucket do Supabase Storage com fallback
+ * Envia a imagem para um bucket do Supabase Storage e devolve o link público.
+ * Devolve null quando falha; quem chama mostra o erro (não há plano B em base64).
  */
 export async function uploadImageToSupabaseStorage(
   fileOrBlob: File | Blob,
@@ -41,7 +34,10 @@ export async function uploadImageToSupabaseStorage(
   prefix = 'img'
 ): Promise<string | null> {
   const sb = getSupabase();
-  if (!sb) return null;
+  if (!sb) {
+    console.warn('Envio de imagem: Supabase não configurado.');
+    return null;
+  }
 
   try {
     const ext = fileOrBlob.type.includes('png') ? 'png' : fileOrBlob.type.includes('webp') ? 'webp' : 'jpg';

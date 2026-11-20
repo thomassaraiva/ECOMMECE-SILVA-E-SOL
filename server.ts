@@ -4,7 +4,6 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { processMelhorEnvioWebhook } from './src/lib/melhorEnvioWebhook';
 import { sendTrackingNotificationEmail, getResendApiKey } from './src/lib/resendEmail';
-import { isStoneConfigured, generateStonePix, processStoneCreditCard, StoneCreditCardInput } from './src/lib/stonePayment';
 
 async function startServer() {
   const app = express();
@@ -86,47 +85,6 @@ async function startServer() {
         carrierName: carrierName || 'Correios SEDEX'
       });
       return res.json(result);
-    } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  // Endpoints do Gateway Stone / Pagar.me
-  app.get('/api/checkout/stone', (_req, res) => {
-    res.json({
-      gateway: 'Stone / Pagar.me - Silva e Sol',
-      isConfigured: isStoneConfigured(),
-      mode: isStoneConfigured() ? 'production' : 'sandbox_simulation'
-    });
-  });
-
-  app.post('/api/checkout/stone', async (req, res) => {
-    try {
-      const { action, amount, orderNumber, cardData } = req.body;
-      if (!amount || amount <= 0) {
-        return res.status(400).json({ success: false, error: 'Valor do pedido inválido.' });
-      }
-
-      const orderRef = orderNumber || `SOL-${Date.now().toString().slice(-6)}`;
-
-      if (action === 'pix') {
-        const pix = generateStonePix(amount, orderRef);
-        return res.json({
-          success: true,
-          mode: isStoneConfigured() ? 'production' : 'simulation',
-          data: pix
-        });
-      }
-
-      if (action === 'credit_card') {
-        if (!cardData) {
-          return res.status(400).json({ success: false, error: 'Dados do cartão não fornecidos.' });
-        }
-        const result = await processStoneCreditCard(amount, cardData as StoneCreditCardInput, orderRef);
-        return res.status(result.success ? 200 : 422).json(result);
-      }
-
-      return res.status(400).json({ success: false, error: 'Ação desconhecida (use "pix" ou "credit_card").' });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
     }

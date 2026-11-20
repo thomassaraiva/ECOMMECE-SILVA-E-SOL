@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  Tag, 
-  Percent, 
-  Calendar, 
-  Check, 
-  AlertCircle, 
-  Search, 
-  ArrowRight, 
-  Sparkles,
-  Zap,
-  Filter
+import {
+  Percent,
+  Check,
+  AlertCircle,
+  Search,
+  Zap
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { validatePromotion } from '../../lib/productValidation';
 import { Product } from '../../types/ecommerce';
+import { formatBRL } from '../../lib/format';
 
 export const AdminPromotionsTab: React.FC = () => {
   const { products, categories, updateProduct } = useStore();
@@ -23,6 +20,7 @@ export const AdminPromotionsTab: React.FC = () => {
   const [batchPercent, setBatchPercent] = useState(15);
   const [batchCategoryId, setBatchCategoryId] = useState('all');
   const [actionSuccess, setActionSuccess] = useState('');
+  const [promoError, setPromoError] = useState('');
 
   const triggerSuccess = (msg: string) => {
     setActionSuccess(msg);
@@ -30,7 +28,6 @@ export const AdminPromotionsTab: React.FC = () => {
   };
 
   const promoProducts = products.filter(p => p.isOnSale);
-  const regularProducts = products.filter(p => !p.isOnSale);
 
   const filteredProducts = products.filter(p => {
     if (selectedCat !== 'all' && p.categoryId !== selectedCat) return false;
@@ -42,41 +39,68 @@ export const AdminPromotionsTab: React.FC = () => {
   });
 
   const handleApplySinglePromo = async (product: Product, percent: number) => {
-    if (percent <= 0 || percent >= 100) return;
-    const promoPrice = Math.round((product.price * (1 - percent / 100)) * 100) / 100;
-    await updateProduct(product.id, {
-      isOnSale: true,
-      promotionalPrice: promoPrice
-    });
-    triggerSuccess(`Desconto de ${percent}% aplicado em "${product.name}". Preço: R$ ${promoPrice.toFixed(2).replace('.', ',')}`);
-  };
-
-  const handleRemovePromo = async (product: Product) => {
-    await updateProduct(product.id, {
-      isOnSale: false,
-      promotionalPrice: undefined,
-      promotionStartDate: undefined,
-      promotionEndDate: undefined
-    });
-    triggerSuccess(`Promoção removida de "${product.name}".`);
-  };
-
-  const handleApplyBatchDiscount = async () => {
-    const targetProducts = batchCategoryId === 'all'
-      ? products
-      : products.filter(p => p.categoryId === batchCategoryId);
-
-    if (!confirm(`Aplicar ${batchPercent}% de desconto em ${targetProducts.length} produtos?`)) return;
-
-    for (const prod of targetProducts) {
-      const promoPrice = Math.round((prod.price * (1 - batchPercent / 100)) * 100) / 100;
-      await updateProduct(prod.id, {
+    try {
+      if (percent <= 0 || percent >= 100) return;
+      const promoPrice = Math.round((product.price * (1 - percent / 100)) * 100) / 100;
+      const invalid = validatePromotion(product.price, promoPrice);
+      if (invalid) {
+        setPromoError(`"${product.name}": ${invalid}`);
+        return;
+      }
+      setPromoError('');
+      await updateProduct(product.id, {
         isOnSale: true,
         promotionalPrice: promoPrice
       });
+      triggerSuccess(`Desconto de ${percent}% aplicado em "${product.name}". Preço: ${formatBRL(promoPrice)}`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
     }
+  };
 
-    triggerSuccess(`Desconto em massa de ${batchPercent}% aplicado em ${targetProducts.length} itens.`);
+  const handleRemovePromo = async (product: Product) => {
+    try {
+      await updateProduct(product.id, {
+        isOnSale: false,
+        promotionalPrice: undefined,
+        promotionStartDate: undefined,
+        promotionEndDate: undefined
+      });
+      triggerSuccess(`Promoção removida de "${product.name}".`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
+  };
+
+  const handleApplyBatchDiscount = async () => {
+    try {
+      const targetProducts = batchCategoryId === 'all'
+        ? products
+        : products.filter(p => p.categoryId === batchCategoryId);
+
+      const firstInvalid = targetProducts
+        .map(p => ({ p, msg: validatePromotion(p.price, Math.round((p.price * (1 - batchPercent / 100)) * 100) / 100) }))
+        .find(x => x.msg);
+      if (firstInvalid) {
+        setPromoError(`"${firstInvalid.p.name}": ${firstInvalid.msg}`);
+        return;
+      }
+      setPromoError('');
+
+      if (!confirm(`Aplicar ${batchPercent}% de desconto em ${targetProducts.length} produtos?`)) return;
+
+      for (const prod of targetProducts) {
+        const promoPrice = Math.round((prod.price * (1 - batchPercent / 100)) * 100) / 100;
+        await updateProduct(prod.id, {
+          isOnSale: true,
+          promotionalPrice: promoPrice
+        });
+      }
+
+      triggerSuccess(`Desconto em massa de ${batchPercent}% aplicado em ${targetProducts.length} itens.`);
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
   };
 
   return (
@@ -86,6 +110,13 @@ export const AdminPromotionsTab: React.FC = () => {
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-900 border border-emerald-700 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold">
           <Check className="w-4 h-4 text-emerald-400" />
           <span>{actionSuccess}</span>
+        </div>
+      )}
+
+      {promoError && (
+        <div role="alert" className="bg-red-950 border border-red-800 text-red-200 px-4 py-3 rounded-2xl flex items-center gap-2.5 text-xs font-semibold">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <span>{promoError}</span>
         </div>
       )}
 
@@ -220,14 +251,14 @@ export const AdminPromotionsTab: React.FC = () => {
 
                   {/* Preço Base */}
                   <td className="py-3 px-3 font-semibold text-stone-300">
-                    R$ {prod.price.toFixed(2).replace('.', ',')}
+                    {formatBRL(prod.price)}
                   </td>
 
                   {/* Preço Promo */}
                   <td className="py-3 px-3">
                     {prod.isOnSale && prod.promotionalPrice ? (
                       <span className="text-[#F4803E] font-bold">
-                        R$ {prod.promotionalPrice.toFixed(2).replace('.', ',')}
+                        {formatBRL(prod.promotionalPrice)}
                       </span>
                     ) : (
                       <span className="text-stone-600">-</span>

@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
-import { 
-  ShoppingBag, 
-  MessageCircle, 
-  ShieldCheck, 
-  Truck, 
-  ArrowLeft, 
-  Check, 
-  Percent, 
-  Heart, 
-  Share2, 
+import {
+  ShoppingBag,
+  MessageCircle,
+  ArrowLeft,
+  Check,
+  Percent,
+  Heart,
+  Share2,
   AlertCircle,
   Ruler,
-  Play,
-  Film
+  Play
 } from 'lucide-react';
 import { Product } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { SizeChartModal } from './SizeChartModal';
-import { trackViewContent, trackAddToWishlist, trackContactWhatsApp } from '../../lib/analytics';
+import { trackViewContent, trackContactWhatsApp } from '../../lib/analytics';
+import { formatBRL } from '../../lib/format';
+import { effectivePrice } from '../../lib/pricing';
 
 interface ProductPageProps {
   product: Product;
@@ -156,27 +155,26 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
 
   const effectiveStock = matchedVariant ? matchedVariant.stockQuantity : product.stockQuantity;
 
-  const discountPercent = product.promotionalPrice && product.price > product.promotionalPrice
-    ? Math.round(((product.price - product.promotionalPrice) / product.price) * 100)
+  const promoPrice = product.isOnSale ? effectivePrice(product) : product.price;
+  const discountPercent = promoPrice < product.price
+    ? Math.round(((product.price - promoPrice) / product.price) * 100)
     : 0;
 
-  const basePrice = matchedVariant?.price || product.price;
-  const currentPrice = product.promotionalPrice && product.isOnSale
-    ? product.promotionalPrice
-    : basePrice;
+  // Até o S2, o preço da variação não é cobrado: mostra só o preço do produto (o mesmo da sacola e do WhatsApp)
+  const currentPrice = promoPrice;
 
   const category = categories.find(c => c.id === product.categoryId);
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
-    addToCart(product, quantity, selectedSize, selectedColor, selectedModel);
+    addToCart(product, selectedSize, selectedColor, selectedModel, quantity);
     setIsCartOpen(true);
   };
 
   const handleBuyNowWhatsApp = () => {
     if (isOutOfStock) return;
     trackContactWhatsApp(`Compra Rápida: ${product.name}`);
-    addToCart(product, quantity, selectedSize, selectedColor, selectedModel);
+    addToCart(product, selectedSize, selectedColor, selectedModel, quantity);
     setIsCartOpen(true);
   };
 
@@ -377,17 +375,14 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
             <div className="p-4 rounded-2xl bg-white border border-[#E8DEC8] shadow-xs space-y-1">
               <div className="flex items-baseline gap-3">
                 <span className="font-heading font-bold text-2xl sm:text-3xl text-[#2A8882]">
-                  R$ {currentPrice.toFixed(2).replace('.', ',')}
+                  {formatBRL(currentPrice)}
                 </span>
-                {product.promotionalPrice && product.isOnSale && (
+                {promoPrice < product.price && (
                   <span className="text-sm text-[#9E9484] line-through">
-                    R$ {product.price.toFixed(2).replace('.', ',')}
+                    {formatBRL(product.price)}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[#736A5E]">
-                Em até 3x de R$ {(currentPrice / 3).toFixed(2).replace('.', ',')} sem juros no cartão ou via Pix
-              </p>
             </div>
 
             {/* Descrição Curta */}
@@ -562,18 +557,6 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
                 <MessageCircle className="w-5 h-5 fill-white text-white" />
                 <span>Comprar com Atendente no WhatsApp</span>
               </button>
-            </div>
-
-            {/* Vantagens e Garantia Solar */}
-            <div className="p-4 rounded-2xl bg-[#F4EFE6] border border-[#E6DDD0] space-y-3 text-xs text-[#736A5E]">
-              <div className="flex items-center gap-2.5">
-                <Truck className="w-4 h-4 text-[#F4803E] shrink-0" />
-                <span>Envio rápido com rastreamento para todo o Brasil.</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-[#2A8882] shrink-0" />
-                <span>Troca grátis e descomplicada em até 7 dias após a entrega.</span>
-              </div>
             </div>
 
             {/* Descrição Detalhada / Ficha Técnica */}

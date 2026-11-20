@@ -9,7 +9,11 @@ import {
   PageRoute, 
   CatalogFilters 
 } from '../types/ecommerce';
-import { StoreService, loadLocalStoreState, saveLocalStoreState, StoreState } from '../lib/storage';
+import { StoreService, StoreState, EMPTY_STORE_STATE } from '../lib/storage';
+import { effectivePrice } from '../lib/pricing';
+
+// Preço que a vitrine mostra: promoção só vale com o produto marcado em oferta
+const shownPrice = (p: Product) => (p.isOnSale ? effectivePrice(p) : p.price);
 import { initializeAnalytics, trackPageView, trackViewContent, trackSearch } from '../lib/analytics';
 
 interface StoreContextType {
@@ -21,6 +25,12 @@ interface StoreContextType {
   settings: StoreSettings;
   orders: Order[];
   isLoading: boolean;
+  loadError: string | null;
+  reload: () => Promise<void>;
+  adminError: string | null;
+  clearAdminError: () => void;
+  loadOrders: () => Promise<void>;
+  clearAdminData: () => void;
   
   // Navegação
   currentPage: PageRoute;
@@ -61,8 +71,6 @@ interface StoreContextType {
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   updateOrderTracking: (orderId: string, trackingData: { trackingCode: string; carrier?: string; trackingUrl?: string }) => Promise<void>;
   updateSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
-  resetToDefaultData: () => void;
-  revalidateData: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -80,8 +88,10 @@ export const defaultFilters: CatalogFilters = {
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [storeState, setStoreState] = useState<StoreState>(() => loadLocalStoreState());
+  const [storeState, setStoreState] = useState<StoreState>(EMPTY_STORE_STATE);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [adminError, setAdminError] = useState<string | null>(null);
 
   // Navegação e Roteamento
   const [currentPage, setCurrentPage] = useState<PageRoute>('home');
@@ -89,49 +99,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [filters, setFilters] = useState<CatalogFilters>(defaultFilters);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
 
-  // Função para revalidação imediata dos dados (sem cache, efeito similar a revalidate = 0)
-  const revalidateData = async () => {
+  const reload = async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
-      const freshLocal = loadLocalStoreState();
-      setStoreState(freshLocal);
       const data = await StoreService.fetchAll();
-      setStoreState(data);
-      saveLocalStoreState(data);
-    } catch (err) {
-      console.error('Erro ao revalidar dados da loja:', err);
+      setStoreState(prev => ({ ...data, orders: prev.orders }));
+      initializeAnalytics({
+        metaPixelId: data.settings.metaPixelId,
+        googleAnalyticsId: data.settings.googleAnalyticsId,
+        tiktokPixelId: data.settings.tiktokPixelId,
+        enableTracking: data.settings.enableTracking,
+      });
+    } catch (err: any) {
+      setLoadError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    // Sincronizar dados iniciais (Supabase ou Local)
-    async function loadData() {
-      try {
-        const data = await StoreService.fetchAll();
-        setStoreState(data);
-        if (data.settings) {
-          initializeAnalytics({
-            metaPixelId: data.settings.metaPixelId,
-            googleAnalyticsId: data.settings.googleAnalyticsId,
-            tiktokPixelId: data.settings.tiktokPixelId,
-            enableTracking: data.settings.enableTracking
-          });
-        }
-      } catch (err) {
-        console.error('Erro ao sincronizar produtos:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-
-    // Listener para sincronização instantânea entre abas e mutações (revalidate = 0)
-    const handleStorageSync = (e: StorageEvent) => {
-      if (e.key === 'silva_sol_store_state_v1' || e.key === 'silva_sol_last_revalidated_at') {
-        const fresh = loadLocalStoreState();
-        setStoreState(fresh);
-      }
-    };
-    window.addEventListener('storage', handleStorageSync);
+    reload();
 
     // Rota administrativa direta via URL (/admin ou #admin)
     const checkAdminRoute = () => {
@@ -146,7 +134,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     window.addEventListener('hashchange', checkAdminRoute);
 
     return () => {
-      window.removeEventListener('storage', handleStorageSync);
       window.removeEventListener('popstate', checkAdminRoute);
       window.removeEventListener('hashchange', checkAdminRoute);
     };
@@ -167,18 +154,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [filters.searchQuery]);
 
-  const updateStateAndPersist = (updater: (prev: StoreState) => StoreState) => {
-    setStoreState(prev => {
-      const next = updater(prev);
-      saveLocalStoreState(next);
-      try {
-        localStorage.setItem('silva_sol_last_revalidated_at', Date.now().toString());
-      } catch (e) {
-        // ignore
-      }
-      return next;
-    });
+  const updateStateAndPersist = (updater: (prev: StoreState) => StoreState) => setStoreState(updater);
+
+  const runAdmin = async <T,>(action: () => Promise<T>): Promise<T> => {
+    setAdminError(null);
+    try {
+      return await action();
+    } catch (err: any) {
+      setAdminError(err.message);
+      throw err;
+    }
   };
+  const clearAdminError = () => setAdminError(null);
+
+  const loadOrders = () => runAdmin(async () => {
+    const orders = await StoreService.fetchOrders();
+    setStoreState(prev => ({ ...prev, orders }));
+  });
+
+  // Ao sair do painel, tira da memória o que só o administrador pode ver
+  const clearAdminData = () => setStoreState(prev => ({ ...prev, orders: [] }));
 
   const navigateToProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -201,16 +196,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Funções Administrativas de Produto com persistência permanente no Supabase
-  const addProduct = async (prodData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => {
+  const addProduct = (prodData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => runAdmin(async () => {
     const created = await StoreService.insertProduct(prodData);
 
     updateStateAndPersist(prev => ({
       ...prev,
       products: [created, ...prev.products.filter(p => p.id !== created.id)]
     }));
-  };
+  });
 
-  const updateProduct = async (id: string, updates: Partial<Product>) => {
+  const updateProduct = (id: string, updates: Partial<Product>) => runAdmin(async () => {
     const now = new Date().toISOString();
     await StoreService.updateProduct(id, updates);
 
@@ -221,9 +216,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (selectedProduct?.id === id) {
       setSelectedProduct(prev => prev ? { ...prev, ...updates, updatedAt: now } : null);
     }
-  };
+  });
 
-  const deleteProduct = async (id: string) => {
+  const deleteProduct = (id: string) => runAdmin(async () => {
     await StoreService.deleteProduct(id);
 
     updateStateAndPersist(prev => ({
@@ -234,20 +229,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSelectedProduct(null);
       setCurrentPage('catalog');
     }
-  };
+  });
 
-  const duplicateProduct = async (id: string): Promise<Product | null> => {
+  const duplicateProduct = (id: string): Promise<Product | null> => runAdmin(async () => {
     const original = storeState.products.find(p => p.id === id);
     if (!original) return null;
 
-    const newId = `prod-${Date.now()}`;
-    const now = new Date().toISOString();
+    const stamp = Date.now();
     const clonedName = `${original.name} (Cópia)`;
-    const clonedSlug = `${original.slug}-copia-${Date.now().toString().slice(-4)}`;
+    const clonedSlug = `${original.slug}-copia-${stamp.toString().slice(-4)}`;
 
-    const cloned: Product = {
-      ...original,
-      id: newId,
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = original;
+    const clonedData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
+      ...rest,
       name: clonedName,
       slug: clonedSlug,
       sku: original.sku ? `${original.sku}-COP` : undefined,
@@ -258,8 +252,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       models: [...original.models],
       variants: original.variants ? original.variants.map((v, i) => ({
         ...v,
-        id: `var-${newId}-${i}`,
-        productId: newId,
+        id: `var-${stamp}-${i}`,
+        productId: '',
         sku: v.sku ? `${v.sku}-C` : undefined
       })) : undefined,
       sizeChart: original.sizeChart ? {
@@ -267,10 +261,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         instructions: original.sizeChart.instructions,
         columns: [...original.sizeChart.columns],
         rows: original.sizeChart.rows.map(r => ({ size: r.size, values: [...r.values] }))
-      } : undefined,
-      createdAt: now,
-      updatedAt: now
+      } : undefined
     };
+
+    const cloned = await StoreService.insertProduct(clonedData);
 
     updateStateAndPersist(prev => ({
       ...prev,
@@ -278,43 +272,47 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
 
     return cloned;
-  };
+  });
 
-  const toggleProductStatus = async (id: string) => {
+  const toggleProductStatus = (id: string) => runAdmin(async () => {
+    const target = storeState.products.find(p => p.id === id);
+    if (!target) return;
+    const newStatus = !target.isActive;
     const now = new Date().toISOString();
+    await StoreService.updateProduct(id, { isActive: newStatus });
     updateStateAndPersist(prev => ({
       ...prev,
-      products: prev.products.map(p => p.id === id ? { ...p, isActive: !p.isActive, updatedAt: now } : p)
+      products: prev.products.map(p => p.id === id ? { ...p, isActive: newStatus, updatedAt: now } : p)
     }));
-  };
+  });
 
   // Funções Administrativas de Categoria com persistência permanente no Supabase
-  const addCategory = async (catData: Omit<Category, 'id'>) => {
+  const addCategory = (catData: Omit<Category, 'id'>) => runAdmin(async () => {
     const newCat = await StoreService.insertCategory(catData);
     updateStateAndPersist(prev => ({
       ...prev,
       categories: [...prev.categories, newCat]
     }));
-  };
+  });
 
-  const updateCategory = async (id: string, updates: Partial<Category>) => {
+  const updateCategory = (id: string, updates: Partial<Category>) => runAdmin(async () => {
     await StoreService.updateCategory(id, updates);
     updateStateAndPersist(prev => ({
       ...prev,
       categories: prev.categories.map(c => (c.id === id ? { ...c, ...updates } : c))
     }));
-  };
+  });
 
-  const deleteCategory = async (id: string) => {
+  const deleteCategory = (id: string) => runAdmin(async () => {
     await StoreService.deleteCategory(id);
     updateStateAndPersist(prev => ({
       ...prev,
       categories: prev.categories.filter(c => c.id !== id),
       subcategories: prev.subcategories.filter(s => s.categoryId !== id)
     }));
-  };
+  });
 
-  const toggleCategoryStatus = async (id: string) => {
+  const toggleCategoryStatus = (id: string) => runAdmin(async () => {
     const target = storeState.categories.find(c => c.id === id);
     const newStatus = target ? !target.isActive : false;
     await StoreService.updateCategory(id, { isActive: newStatus });
@@ -322,59 +320,59 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...prev,
       categories: prev.categories.map(c => c.id === id ? { ...c, isActive: newStatus } : c)
     }));
-  };
+  });
 
   // Subcategorias com persistência permanente no Supabase
-  const addSubcategory = async (subData: Omit<Subcategory, 'id'>) => {
+  const addSubcategory = (subData: Omit<Subcategory, 'id'>) => runAdmin(async () => {
     const newSub = await StoreService.insertSubcategory(subData);
     updateStateAndPersist(prev => ({
       ...prev,
       subcategories: [...prev.subcategories, newSub]
     }));
-  };
+  });
 
-  const updateSubcategory = async (id: string, updates: Partial<Subcategory>) => {
+  const updateSubcategory = (id: string, updates: Partial<Subcategory>) => runAdmin(async () => {
     await StoreService.updateSubcategory(id, updates);
     updateStateAndPersist(prev => ({
       ...prev,
       subcategories: prev.subcategories.map(s => (s.id === id ? { ...s, ...updates } : s))
     }));
-  };
+  });
 
-  const deleteSubcategory = async (id: string) => {
+  const deleteSubcategory = (id: string) => runAdmin(async () => {
     await StoreService.deleteSubcategory(id);
     updateStateAndPersist(prev => ({
       ...prev,
       subcategories: prev.subcategories.filter(s => s.id !== id)
     }));
-  };
+  });
 
   // Banners com persistência permanente no Supabase
-  const addBanner = async (bannerData: Omit<Banner, 'id'>) => {
+  const addBanner = (bannerData: Omit<Banner, 'id'>) => runAdmin(async () => {
     const newBanner = await StoreService.insertBanner(bannerData);
     updateStateAndPersist(prev => ({
       ...prev,
       banners: [...prev.banners, newBanner]
     }));
-  };
+  });
 
-  const updateBanner = async (id: string, updates: Partial<Banner>) => {
+  const updateBanner = (id: string, updates: Partial<Banner>) => runAdmin(async () => {
     await StoreService.updateBanner(id, updates);
     updateStateAndPersist(prev => ({
       ...prev,
       banners: prev.banners.map(b => (b.id === id ? { ...b, ...updates } : b))
     }));
-  };
+  });
 
-  const deleteBanner = async (id: string) => {
+  const deleteBanner = (id: string) => runAdmin(async () => {
     await StoreService.deleteBanner(id);
     updateStateAndPersist(prev => ({
       ...prev,
       banners: prev.banners.filter(b => b.id !== id)
     }));
-  };
+  });
 
-  const toggleBannerStatus = async (id: string) => {
+  const toggleBannerStatus = (id: string) => runAdmin(async () => {
     const target = storeState.banners.find(b => b.id === id);
     const newStatus = target ? !target.isActive : false;
     await StoreService.updateBanner(id, { isActive: newStatus });
@@ -382,18 +380,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...prev,
       banners: prev.banners.map(b => b.id === id ? { ...b, isActive: newStatus } : b)
     }));
-  };
+  });
 
-  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
+  const updateOrderStatus = (orderId: string, status: Order['status']) => runAdmin(async () => {
     const now = new Date().toISOString();
     await StoreService.updateOrder(orderId, { status });
     updateStateAndPersist(prev => ({
       ...prev,
       orders: prev.orders.map(o => o.id === orderId ? { ...o, status, updatedAt: now } : o)
     }));
-  };
+  });
 
-  const updateOrderTracking = async (orderId: string, trackingData: { trackingCode: string; carrier?: string; trackingUrl?: string }) => {
+  const updateOrderTracking = (orderId: string, trackingData: { trackingCode: string; carrier?: string; trackingUrl?: string }) => runAdmin(async () => {
     const now = new Date().toISOString();
     const trackingCarrier = trackingData.carrier || 'Melhor Envio / Correios';
     const trackingUrl = trackingData.trackingUrl || `https://melhorrastreio.com.br/rastreio/${trackingData.trackingCode}`;
@@ -418,10 +416,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updatedAt: now 
       } : o)
     }));
-  };
+  });
 
   // Configurações da Loja com persistência permanente no Supabase
-  const updateSettings = async (newSettings: Partial<StoreSettings>) => {
+  const updateSettings = (newSettings: Partial<StoreSettings>) => runAdmin(async () => {
     await StoreService.updateSettings(newSettings);
     updateStateAndPersist(prev => {
       const merged = { ...prev.settings, ...newSettings };
@@ -436,16 +434,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         settings: merged
       };
     });
-  };
+  });
 
-  const resetToDefaultData = () => {
-    localStorage.removeItem('silva_e_sol_store_data_v1');
-    const fresh = loadLocalStoreState();
-    setStoreState(fresh);
-  };
-
+  // Vitrine: só produtos ativos (o painel usa a lista completa em products)
   const filteredProducts = useMemo(() => {
-    let result = [...storeState.products];
+    let result = storeState.products.filter(p => p.isActive);
 
     // Busca textual por nome, descrição, SKU ou tags
     if (filters.searchQuery && filters.searchQuery.trim()) {
@@ -479,15 +472,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Filtro por Preço Mínimo e Máximo
     if (filters.minPrice !== undefined) {
-      result = result.filter(p => (p.promotionalPrice || p.price) >= filters.minPrice!);
+      result = result.filter(p => shownPrice(p) >= filters.minPrice!);
     }
     if (filters.maxPrice !== undefined) {
-      result = result.filter(p => (p.promotionalPrice || p.price) <= filters.maxPrice!);
+      result = result.filter(p => shownPrice(p) <= filters.maxPrice!);
     }
 
     // Filtro de Promoções
     if (filters.onlyPromotions) {
-      result = result.filter(p => p.isOnSale && p.promotionalPrice && p.promotionalPrice < p.price);
+      result = result.filter(p => shownPrice(p) < p.price);
     }
 
     // Ordenação
@@ -496,10 +489,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         break;
       case 'price-asc':
-        result.sort((a, b) => (a.promotionalPrice || a.price) - (b.promotionalPrice || b.price));
+        result.sort((a, b) => shownPrice(a) - shownPrice(b));
         break;
       case 'price-desc':
-        result.sort((a, b) => (b.promotionalPrice || b.price) - (a.promotionalPrice || a.price));
+        result.sort((a, b) => shownPrice(b) - shownPrice(a));
         break;
       case 'name':
         result.sort((a, b) => a.name.localeCompare(b.name));
@@ -558,8 +551,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateOrderStatus,
         updateOrderTracking,
         updateSettings,
-        resetToDefaultData,
-        revalidateData
+        loadError,
+        reload,
+        adminError,
+        clearAdminError,
+        loadOrders,
+        clearAdminData
       }}
     >
       {children}

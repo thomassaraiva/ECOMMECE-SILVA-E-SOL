@@ -1,26 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  X, 
-  Check, 
-  Upload, 
-  Plus, 
-  Trash2, 
-  Star, 
-  ArrowLeft, 
-  ArrowRight, 
-  Play, 
-  Film, 
-  Layers, 
-  Tag, 
-  Ruler, 
-  Globe, 
-  Percent, 
+import {
+  X,
+  Check,
+  Upload,
+  Plus,
+  Trash2,
+  Star,
+  ArrowLeft,
+  ArrowRight,
+  Play,
+  Film,
+  Layers,
+  Tag,
+  Ruler,
   AlertCircle,
   Database,
-  Sparkles,
   RefreshCw,
   Camera,
-  Image as ImageIcon,
   Smartphone,
   Laptop,
   Loader2,
@@ -31,11 +27,12 @@ import {
   Box,
   Scale
 } from 'lucide-react';
-import { Product, Category, Subcategory, SizeChart, SizeChartRow, ProductVariant } from '../../types/ecommerce';
+import { Product, SizeChart, SizeChartRow, ProductVariant } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
-import { getDefaultSizeChartForCategory, SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
-import { optimizeProductVariantImage, formatBytes } from '../../lib/imageOptimizer';
-import { supabase, uploadImageToSupabaseStorage, isSupabaseConfigured } from '../../lib/supabase';
+import { SIZE_CHART_PRESETS } from '../../data/sizeChartPresets';
+import { validatePromotion, priceFieldForError, DISCOUNT_PERCENT_ERROR } from '../../lib/productValidation';
+import { parsePercent, promoFromPercent, percentFromPromo } from '../../lib/pricing';
+import { uploadProductImage, PRODUCT_UPLOAD_ERROR } from '../../lib/productImageUpload';
 
 interface AdminProductModalProps {
   isOpen: boolean;
@@ -55,6 +52,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [activeTab, setActiveTab] = useState<ModalTab>('general');
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const invalidPriceField = priceFieldForError(errorMsg);
 
   // Criação rápida de categoria inline
   const [showQuickCategoryModal, setShowQuickCategoryModal] = useState(false);
@@ -71,6 +69,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [price, setPrice] = useState(89.90);
   const [promotionalPrice, setPromotionalPrice] = useState<number | undefined>(undefined);
   const [isOnSale, setIsOnSale] = useState(false);
+  const [discountText, setDiscountText] = useState('');
   const [promotionStartDate, setPromotionStartDate] = useState('');
   const [promotionEndDate, setPromotionEndDate] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
@@ -84,12 +83,11 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [newImageUrl, setNewImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Aba 3: Variações & Estoque
   const [sizesStr, setSizesStr] = useState('P (38), M (40), G (42), GG (44-46)');
   const [colorsStr, setColorsStr] = useState('Verde, Azul, Branco, Preto');
-  const [modelsStr, setModelsStr] = useState('Slim Lateral 9cm, Tradicional');
+  const [modelsStr, setModelsStr] = useState('Slim Lateral 8cm, Tradicional');
   const [stockQuantity, setStockQuantity] = useState(20);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [colorImages, setColorImages] = useState<Record<string, string>>({});
@@ -117,10 +115,22 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
 
-  // Cálculo de desconto percentual em tempo real
-  const calculatedDiscountPercent = promotionalPrice && price > promotionalPrice
-    ? Math.round(((price - promotionalPrice) / price) * 100)
-    : 0;
+  // O % é só auxílio de digitação: o que se grava é o preço promocional.
+  const handlePriceChange = (value: number) => {
+    setPrice(value);
+    const pct = parsePercent(discountText);
+    if (pct != null && value > 0) setPromotionalPrice(promoFromPercent(value, pct));
+  };
+  const handlePromoChange = (value: number | undefined) => {
+    setPromotionalPrice(value);
+    const pct = value == null ? null : percentFromPromo(price, value);
+    setDiscountText(pct == null ? '' : String(pct));
+  };
+  const handleDiscountChange = (text: string) => {
+    setDiscountText(text);
+    const pct = parsePercent(text);
+    if (pct != null && price > 0) setPromotionalPrice(promoFromPercent(price, pct));
+  };
 
   // Carregar dados na abertura
   useEffect(() => {
@@ -133,6 +143,8 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setDetailedDescription(productToEdit.detailedDescription || '');
       setPrice(productToEdit.price);
       setPromotionalPrice(productToEdit.promotionalPrice);
+      const pctInicial = productToEdit.promotionalPrice == null ? null : percentFromPromo(productToEdit.price, productToEdit.promotionalPrice);
+      setDiscountText(pctInicial == null ? '' : String(pctInicial));
       setIsOnSale(productToEdit.isOnSale);
       setPromotionStartDate(productToEdit.promotionStartDate || '');
       setPromotionEndDate(productToEdit.promotionEndDate || '');
@@ -183,6 +195,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setDetailedDescription('');
       setPrice(89.90);
       setPromotionalPrice(undefined);
+      setDiscountText('');
       setIsOnSale(false);
       setPromotionStartDate('');
       setPromotionEndDate('');
@@ -192,14 +205,11 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       setCategoryId(categories[0]?.id || '');
       setSubcategoryId('');
       setStockQuantity(20);
-      setImages([
-        'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
-      ]);
+      setImages([]);
       setVideoUrl('');
       setSizesStr('P (38), M (40), G (42), GG (44-46)');
       setColorsStr('Verde, Azul, Branco, Preto');
-      setModelsStr('Slim Lateral 9cm, Tradicional');
+      setModelsStr('Slim Lateral 8cm, Tradicional');
       setVariants([]);
       setColorImages({});
       setHasSizeChart(true);
@@ -227,42 +237,24 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       .replace(/(^-|-$)+/g, '');
     setSlug(generated);
     if (!seoTitle) setSeoTitle(`${name} | Silva e Sol`);
-    if (!seoDescription) setSeoDescription(description || `Compre ${name} na Silva e Sol com frete especial e atendimento direto via WhatsApp.`);
+    if (!seoDescription) setSeoDescription(description || `Compre ${name} na Silva e Sol com atendimento direto via WhatsApp.`);
   };
 
-  // Upload de Imagens Múltiplas via FileReader
-  const handleImageFilesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file: File) => {
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        const result = uploadEvent.target?.result as string;
-        if (result) {
-          setImages(prev => [...prev, result]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
+  // Upload de fotos para o Storage (bucket products); falhou, mostra o erro e não guarda nada
+  const handleImageFilesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files: File[] = e.target.files ? Array.from(e.target.files) : [];
     if (e.target) e.target.value = '';
-  };
+    if (files.length === 0) return;
+    setErrorMsg('');
 
-  // Upload de Vídeo via FileReader
-  const handleVideoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const result = uploadEvent.target?.result as string;
-      if (result) {
-        setVideoUrl(result);
+    for (const file of files) {
+      try {
+        const url = await uploadProductImage(file, 'produto');
+        setImages(prev => [...prev, url]);
+      } catch {
+        setErrorMsg(PRODUCT_UPLOAD_ERROR);
       }
-    };
-    reader.readAsDataURL(file);
-    if (e.target) e.target.value = '';
+    }
   };
 
   const handleAddImageUrl = () => {
@@ -356,15 +348,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     setOptimizingVariantIndex(index);
     setVariantUploadNotice(null);
     try {
-      const optimized = await optimizeProductVariantImage(file);
-      let finalUrl = optimized.dataUrl;
-
-      if (isSupabaseConfigured) {
-        const storageUrl = await uploadImageToSupabaseStorage(file, 'products', `variant-${index}`);
-        if (storageUrl) {
-          finalUrl = storageUrl;
-        }
-      }
+      const finalUrl = await uploadProductImage(file, `variant-${index}`);
 
       setVariants(prev => prev.map((item, idx) => idx === index ? { ...item, imageUrl: finalUrl } : item));
 
@@ -380,24 +364,10 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       // Disponibiliza na galeria geral de fotos do produto caso ainda não esteja
       setImages(prev => prev.includes(finalUrl) ? prev : [...prev, finalUrl]);
 
-      setVariantUploadNotice(
-        `Foto da variação processada com sucesso: ${optimized.originalSizeFormatted} → ${optimized.compressedSizeFormatted} (-${optimized.savingsPercent}%)`
-      );
+      setVariantUploadNotice('Foto da variação enviada.');
       setTimeout(() => setVariantUploadNotice(null), 4500);
-    } catch (err: any) {
-      console.error('Erro ao otimizar foto da variação:', err);
-      // Fallback seguro via FileReader caso canvas encontre arquivo incomum
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        if (dataUrl) {
-          setVariants(prev => prev.map((item, idx) => idx === index ? { ...item, imageUrl: dataUrl } : item));
-          setImages(prev => prev.includes(dataUrl) ? prev : [...prev, dataUrl]);
-          setVariantUploadNotice('Foto carregada com sucesso para a variação.');
-          setTimeout(() => setVariantUploadNotice(null), 4000);
-        }
-      };
-      reader.readAsDataURL(file);
+    } catch {
+      setErrorMsg(PRODUCT_UPLOAD_ERROR);
     } finally {
       setOptimizingVariantIndex(null);
     }
@@ -409,15 +379,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     setOptimizingColorName(colorName);
     setVariantUploadNotice(null);
     try {
-      const optimized = await optimizeProductVariantImage(file);
-      let finalUrl = optimized.dataUrl;
-
-      if (isSupabaseConfigured) {
-        const storageUrl = await uploadImageToSupabaseStorage(file, 'products', `color-${colorName}`);
-        if (storageUrl) {
-          finalUrl = storageUrl;
-        }
-      }
+      const finalUrl = await uploadProductImage(file, `color-${colorName}`);
 
       // 1. Guarda no mapa de cores
       setColorImages(prev => ({
@@ -475,13 +437,10 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         });
       });
 
-      setVariantUploadNotice(
-        `Foto da cor "${colorName}" comprimida (${optimized.compressedSizeFormatted}) e vinculada às variações com sucesso!`
-      );
+      setVariantUploadNotice(`Foto da cor "${colorName}" enviada e vinculada às variações.`);
       setTimeout(() => setVariantUploadNotice(null), 4500);
-    } catch (err: any) {
-      console.error('Erro ao otimizar imagem por cor:', err);
-      alert('Falha ao processar imagem da cor: ' + (err?.message || err));
+    } catch {
+      setErrorMsg(PRODUCT_UPLOAD_ERROR);
     } finally {
       setOptimizingColorName(null);
     }
@@ -521,6 +480,19 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     if (images.length === 0) {
       setErrorMsg('Adicione pelo menos uma foto para o produto.');
       setActiveTab('media');
+      return;
+    }
+    if (isOnSale && discountText.trim() !== '' && parsePercent(discountText) == null) {
+      setErrorMsg(DISCOUNT_PERCENT_ERROR);
+      setActiveTab('general');
+      return;
+    }
+    const promoError = isOnSale
+      ? validatePromotion(Number(price), promotionalPrice == null ? undefined : Number(promotionalPrice), { required: true })
+      : null;
+    if (promoError) {
+      setErrorMsg(promoError);
+      setActiveTab('general');
       return;
     }
 
@@ -573,81 +545,10 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
         lengthCm: Number(lengthCm) || 20
       };
 
-      // Inserção direta na tabela 'products' do Supabase com tratamento resiliente de colunas
-      let supabaseCreatedId: string | undefined;
-      try {
-        const supabaseRow: Record<string, any> = {
-          name: productPayload.name,
-          slug: productPayload.slug,
-          description: productPayload.description,
-          price: productPayload.price,
-          stock_quantity: productPayload.stockQuantity,
-          category_id: productPayload.categoryId,
-          is_active: productPayload.isActive,
-          is_featured: productPayload.isFeatured,
-          is_new: productPayload.isNew,
-          is_on_sale: productPayload.isOnSale,
-          images: productPayload.images,
-          sizes: productPayload.sizes,
-          colors: productPayload.colors,
-          models: productPayload.models,
-          sku: productPayload.sku || null,
-          brand: productPayload.brand,
-          detailed_description: productPayload.detailedDescription || null,
-          promotional_price: productPayload.promotionalPrice || null,
-          subcategory_id: productPayload.subcategoryId || null,
-          video_url: productPayload.videoUrl || null,
-          size_chart: productPayload.sizeChart || null,
-          variants: productPayload.variants || null,
-          seo_title: productPayload.seoTitle || null,
-          seo_description: productPayload.seoDescription || null,
-          weight_grams: productPayload.weightGrams,
-          height_cm: productPayload.heightCm,
-          width_cm: productPayload.widthCm,
-          length_cm: productPayload.lengthCm,
-          updated_at: new Date().toISOString()
-        };
-
-        if (productToEdit) {
-          const { error: sbUpdateErr } = await supabase
-            .from('products')
-            .update(supabaseRow)
-            .eq('id', productToEdit.id);
-
-          if (sbUpdateErr && (sbUpdateErr.message?.includes('variants') || sbUpdateErr.message?.includes('column'))) {
-            // Tenta sem a coluna variants caso o schema no Supabase ainda não a tenha
-            const { variants, ...cleanRow } = supabaseRow;
-            await supabase.from('products').update(cleanRow).eq('id', productToEdit.id);
-          }
-        } else {
-          // Chamada .insert() na tabela products do Supabase
-          let { data: sbInsertData, error: sbInsertErr } = await supabase
-            .from('products')
-            .insert([supabaseRow])
-            .select();
-
-          if (sbInsertErr && (sbInsertErr.message?.includes('variants') || sbInsertErr.message?.includes('column'))) {
-            const { variants, ...cleanRow } = supabaseRow;
-            const retry = await supabase.from('products').insert([cleanRow]).select();
-            sbInsertData = retry.data;
-            sbInsertErr = retry.error;
-          }
-
-          if (sbInsertData && sbInsertData[0]?.id) {
-            supabaseCreatedId = String(sbInsertData[0].id);
-          }
-        }
-      } catch (sbErr) {
-        console.warn('Aviso de comunicação com Supabase (salvo localmente):', sbErr);
-      }
-
       if (productToEdit) {
         await updateProduct(productToEdit.id, productPayload);
       } else {
-        await addProduct({
-          ...productPayload,
-          ...(supabaseCreatedId ? { id: supabaseCreatedId } : {})
-        });
+        await addProduct(productPayload);
       }
 
       onClose();
@@ -753,13 +654,6 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
 
         {/* Corpo do Formulário */}
         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
-          {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
           {/* ABA 1: GERAL & PREÇO */}
           {activeTab === 'general' && (
             <div className="space-y-6">
@@ -921,46 +815,52 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs text-stone-400 mb-1 font-medium">Preço Normal (R$)</label>
+                    <label htmlFor="product-price" className="block text-xs text-stone-400 mb-1 font-medium">Preço Normal (R$)</label>
                     <input
+                      id="product-price"
+                      aria-invalid={invalidPriceField === 'price' || undefined}
+                      aria-describedby={invalidPriceField === 'price' ? 'product-error-msg' : undefined}
                       type="number"
                       step="0.01"
                       required
                       value={price}
-                      onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-                      className="w-full px-3.5 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white text-sm font-bold focus:outline-none focus:border-[#2A8882]"
+                      onChange={(e) => handlePriceChange(parseFloat(e.target.value) || 0)}
+                      className={`w-full px-3.5 py-2 rounded-xl bg-stone-900 border ${invalidPriceField === 'price' ? 'border-red-500' : 'border-stone-800'} text-white text-sm font-bold focus:outline-none focus:border-[#2A8882]`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs text-stone-400 mb-1 font-medium">
+                    <label htmlFor="product-promo-price" className="block text-xs text-stone-400 mb-1 font-medium">
                       Preço com Desconto (R$)
                     </label>
                     <input
+                      id="product-promo-price"
+                      aria-invalid={invalidPriceField === 'promotionalPrice' || undefined}
+                      aria-describedby={invalidPriceField === 'promotionalPrice' ? 'product-error-msg' : undefined}
                       type="number"
                       step="0.01"
                       disabled={!isOnSale}
                       value={promotionalPrice || ''}
-                      onChange={(e) => setPromotionalPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+                      onChange={(e) => handlePromoChange(e.target.value ? parseFloat(e.target.value) : undefined)}
                       placeholder={isOnSale ? 'Ex: 69.90' : 'Desativado'}
-                      className="w-full px-3.5 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white text-sm font-bold disabled:opacity-40 focus:outline-none focus:border-[#F4803E]"
+                      className={`w-full px-3.5 py-2 rounded-xl bg-stone-900 border ${invalidPriceField === 'promotionalPrice' ? 'border-red-500' : 'border-stone-800'} text-white text-sm font-bold disabled:opacity-40 focus:outline-none focus:border-[#F4803E]`}
                     />
                   </div>
 
-                  {/* Indicador de Desconto Automático */}
-                  <div className="flex flex-col justify-end">
-                    {isOnSale && calculatedDiscountPercent > 0 ? (
-                      <div className="px-3 py-2 bg-[#F4803E]/15 border border-[#F4803E]/40 rounded-xl text-center">
-                        <span className="text-xs font-extrabold text-[#F4803E] flex items-center justify-center gap-1">
-                          <Percent className="w-3.5 h-3.5" />
-                          Desconto Calculado: -{calculatedDiscountPercent}% OFF
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="px-3 py-2 bg-stone-900 border border-stone-800/80 rounded-xl text-center text-xs text-stone-500">
-                        Nenhum desconto ativo
-                      </div>
-                    )}
+                  <div>
+                    <label htmlFor="product-discount-percent" className="block text-xs text-stone-400 mb-1 font-medium">Desconto (%)</label>
+                    <input
+                      id="product-discount-percent"
+                      aria-invalid={invalidPriceField === 'discountPercent' || undefined}
+                      aria-describedby={invalidPriceField === 'discountPercent' ? 'product-error-msg' : undefined}
+                      type="text"
+                      inputMode="decimal"
+                      disabled={!isOnSale}
+                      value={discountText}
+                      onChange={(e) => handleDiscountChange(e.target.value)}
+                      placeholder={isOnSale ? 'Ex: 20' : 'Desativado'}
+                      className={`w-full px-3.5 py-2 rounded-xl bg-stone-900 border ${invalidPriceField === 'discountPercent' ? 'border-red-500' : 'border-stone-800'} text-white text-sm font-bold disabled:opacity-40 focus:outline-none focus:border-[#F4803E]`}
+                    />
                   </div>
                 </div>
 
@@ -999,7 +899,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                   required
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Resumo dos diferenciais da peça (tecido, proteção solar, secagem rápida)..."
+                  placeholder="Resumo da peça (tecido, forro, modelagem)..."
                   className="w-full p-3 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
                 />
               </div>
@@ -1236,24 +1136,8 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">Ou selecione um arquivo de vídeo local:</label>
-                      <button
-                        type="button"
-                        onClick={() => videoInputRef.current?.click()}
-                        className="w-full py-2 px-3 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Upload className="w-4 h-4 text-amber-400" />
-                        <span>Carregar arquivo MP4</span>
-                      </button>
-                      <input
-                        type="file"
-                        ref={videoInputRef}
-                        accept="video/mp4,video/webm"
-                        onChange={handleVideoFileUpload}
-                        className="hidden"
-                      />
-                    </div>
+                    {/* O bucket products só aceita fotos (jpeg/png/webp) */}
+                    <p className="text-[11px] text-stone-500">Vídeo disponível em breve: por enquanto, só por link.</p>
                   </div>
 
                   {/* Prévia do Vídeo no Painel */}
@@ -1404,12 +1288,12 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                       type="text"
                       value={modelsStr}
                       onChange={(e) => setModelsStr(e.target.value)}
-                      placeholder="Slim Lateral 9cm, Tradicional, Boxer"
+                      placeholder="Slim Lateral 8cm, Tradicional, Boxer"
                       className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
                     />
                     <div className="flex flex-wrap gap-1 pt-1">
                       {[
-                        { label: 'Sungas Slim (9cm)', val: 'Slim Lateral 9cm, Tradicional' },
+                        { label: 'Sungas Slim (8cm)', val: 'Slim Lateral 8cm, Tradicional' },
                         { label: 'Boxer & Tradicional', val: 'Boxer, Tradicional' },
                         { label: 'Padrão Único', val: 'Padrão' }
                       ].map((preset) => (
@@ -2167,7 +2051,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                                     const val = e.target.value;
                                     setSizeChartRows(prev => prev.map((r, i) => i === rowIdx ? { ...r, size: val } : r));
                                   }}
-                                  className="w-16 px-2 py-1 bg-stone-900 border border-stone-800 rounded text-center font-bold text-amber-400 text-xs"
+                                  className="w-full min-w-16 px-2 py-1 bg-stone-900 border border-stone-800 rounded text-center font-bold text-amber-400 text-xs"
                                 />
                               </td>
                               {row.values.map((val, valIdx) => (
@@ -2295,7 +2179,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                   rows={3}
                   value={seoDescription}
                   onChange={(e) => setSeoDescription(e.target.value)}
-                  placeholder="Ex: Conheça a Sunga Solar Degradê da Silva e Sol. Modelagem anatômica, tecido de secagem ultrarrápida e proteção UV50+. Compre direto via WhatsApp."
+                  placeholder="Ex.: Sunga em poliéster com elastano, forro em microfibra."
                   className="w-full p-3 rounded-xl bg-stone-950 border border-stone-800 text-white text-xs focus:outline-none focus:border-[#2A8882]"
                 />
               </div>
@@ -2319,7 +2203,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
           )}
 
           {/* Rodapé Fixo do Modal */}
-          <div className="pt-4 border-t border-stone-800 flex items-center justify-between">
+          <div className="pt-4 border-t border-stone-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={onClose}
@@ -2328,7 +2212,13 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
               Cancelar
             </button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:min-w-0">
+              {errorMsg && (
+                <div id="product-error-msg" role="alert" className="p-3 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs flex items-center gap-2 wrap-break-word min-w-0">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={isSaving}

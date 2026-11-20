@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Waves, Sparkles, Heart, Compass, ArrowRight } from 'lucide-react';
+import { Sun, Waves, Sparkles, Compass, ArrowRight } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
 export const AboutPage: React.FC = () => {
@@ -57,10 +57,10 @@ export const AboutPage: React.FC = () => {
             O Que Torna Nossas Peças Únicas
           </h3>
           <p>
-            Não acreditamos em estampas passageiras ou modelagens genéricas. Cada sunga da Silva e Sol é pensada com forro duplo que não junta areia, elástico que não perde a tensão após o contato com a água salobra e cordões reforçados que garantem estabilidade para o banho de mar ou a prática esportiva.
+            Não acreditamos em estampas passageiras ou modelagens genéricas. Cada sunga da Silva e Sol é pensada com forro interno em microfibra e cordão de ajuste na cintura.
           </p>
           <p>
-            Nossas camisetas e regatas utilizam tramas nobres de algodão pré-lavado, que mantêm a maciez e não encolhem, permitindo uma transição orgânica do calçadão à noite na cidade.
+            Nossas peças são em poliéster com elastano e de secagem rápida.
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export const AboutPage: React.FC = () => {
           <div className="p-5 rounded-2xl bg-stone-900 border border-stone-800 text-center">
             <Waves className="w-8 h-8 text-emerald-400 mx-auto mb-3" />
             <h4 className="font-heading font-bold text-sm text-stone-100">Vida ao Ar Livre</h4>
-            <p className="text-xs text-stone-400 mt-1">Peças leves, secagem rápida e proteção UV50+ permanente.</p>
+            <p className="text-xs text-stone-400 mt-1">Peças leves e de secagem rápida.</p>
           </div>
 
           <div className="p-5 rounded-2xl bg-stone-900 border border-stone-800 text-center">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, Instagram, Mail, MapPin, Send, CheckCircle, Clock } from 'lucide-react';
+import { MessageCircle, Instagram, Mail, Send, CheckCircle, Clock } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 
 export const ContactPage: React.FC = () => {
@@ -64,7 +64,7 @@ export const ContactPage: React.FC = () => {
                   WhatsApp Oficial
                 </h3>
                 <p className="text-xs text-stone-400 mt-0.5">
-                  Atendimento direto e respostas rápidas para seus pedidos.
+                  Atendimento direto para os seus pedidos.
                 </p>
                 <span className="inline-block mt-2 text-xs font-mono font-bold text-amber-400">
                   {settings.whatsappNumber}

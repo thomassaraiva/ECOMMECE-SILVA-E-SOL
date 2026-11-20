@@ -1,16 +1,14 @@
 import React from 'react';
-import { 
-  Package, 
-  Layers, 
-  Image as ImageIcon, 
-  Tag, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Plus, 
-  ExternalLink, 
-  TrendingUp, 
+import {
+  Package,
+  Layers,
+  Image as ImageIcon,
+  Tag,
+  AlertTriangle,
+  Plus,
+  ExternalLink,
+  TrendingUp,
   ShoppingBag,
-  Clock,
   Sparkles
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
@@ -45,8 +43,12 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
   const pendingOrders = orders.filter(o => o.status === 'pending_whatsapp').length;
 
   const handleQuickAddStock = async (product: Product, amount: number) => {
-    const newQty = Math.max(0, product.stockQuantity + amount);
-    await updateProduct(product.id, { stockQuantity: newQty });
+    try {
+      const newQty = Math.max(0, product.stockQuantity + amount);
+      await updateProduct(product.id, { stockQuantity: newQty });
+    } catch {
+      // Só evita a rejeição não tratada: a mensagem já aparece na faixa de erro do painel (runAdmin).
+    }
   };
 
   return (
