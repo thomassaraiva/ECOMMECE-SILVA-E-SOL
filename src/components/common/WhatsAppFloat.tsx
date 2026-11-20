@@ -1,13 +1,16 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { buildProductDoubtUrl } from '../../lib/whatsappOrder';
 import { trackContactWhatsApp } from '../../lib/analytics';
 
 export const WhatsAppFloat: React.FC = () => {
-  const { settings } = useStore();
+  const { settings, currentPage, selectedProduct } = useStore();
   const rawNumber = settings.whatsappNumber.replace(/\D/g, '') || '5581920019982';
   const defaultText = encodeURIComponent('Olá! Gostaria de informações sobre os produtos da Silva e Sol.');
-  const whatsappUrl = `https://wa.me/${rawNumber}?text=${defaultText}`;
+  const whatsappUrl = currentPage === 'product' && selectedProduct
+    ? buildProductDoubtUrl(selectedProduct, { ...settings, whatsappNumber: rawNumber })
+    : `https://wa.me/${rawNumber}?text=${defaultText}`;
 
   return (
     <aside aria-label="Atendimento pelo WhatsApp">

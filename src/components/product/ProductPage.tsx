@@ -11,7 +11,7 @@ import {
   Ruler,
   Play
 } from 'lucide-react';
-import { Product } from '../../types/ecommerce';
+import { CartItem, Product } from '../../types/ecommerce';
 import { useStore } from '../../context/StoreContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -19,13 +19,17 @@ import { SizeChartModal } from './SizeChartModal';
 import { trackViewContent, trackContactWhatsApp } from '../../lib/analytics';
 import { formatBRL } from '../../lib/format';
 import { effectivePrice } from '../../lib/pricing';
+import { buildWhatsAppOrderUrl, buildBackInStockUrl } from '../../lib/whatsappOrder';
+
+// A loja produz sob encomenda: não há limite de estoque para o cliente
+const MAX_QUANTITY = 10;
 
 interface ProductPageProps {
   product: Product;
 }
 
 export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
-  const { setCurrentPage, categories } = useStore();
+  const { setCurrentPage, categories, settings } = useStore();
   const { addToCart, setIsCartOpen } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
@@ -153,8 +157,6 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
   const isGeneralOutOfStock = product.stockQuantity <= 0;
   const isOutOfStock = isGeneralOutOfStock || isVariantOutOfStock;
 
-  const effectiveStock = matchedVariant ? matchedVariant.stockQuantity : product.stockQuantity;
-
   const promoPrice = product.isOnSale ? effectivePrice(product) : product.price;
   const discountPercent = promoPrice < product.price
     ? Math.round(((product.price - promoPrice) / product.price) * 100)
@@ -174,8 +176,25 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
   const handleBuyNowWhatsApp = () => {
     if (isOutOfStock) return;
     trackContactWhatsApp(`Compra Rápida: ${product.name}`);
-    addToCart(product, selectedSize, selectedColor, selectedModel, quantity);
-    setIsCartOpen(true);
+    const item: CartItem = {
+      id: `${product.id}-${selectedSize}-${selectedColor}-${selectedModel}`,
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      promotionalPrice: product.isOnSale ? product.promotionalPrice : undefined,
+      selectedSize: selectedSize || undefined,
+      selectedColor: selectedColor || undefined,
+      selectedModel: selectedModel || undefined,
+      quantity,
+      image: product.images[0] || '',
+      maxStock: MAX_QUANTITY,
+    };
+    window.open(buildWhatsAppOrderUrl([item], settings), '_blank', 'noopener,noreferrer');
+  };
+
+  const handleNotifyMe = () => {
+    trackContactWhatsApp(`Avise-me: ${product.name}`);
+    window.open(buildBackInStockUrl(product, settings, { size: selectedSize, color: selectedColor }), '_blank', 'noopener,noreferrer');
   };
 
   const handleShare = () => {
@@ -502,12 +521,12 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
               {isOutOfStock ? (
                 <div className="flex items-center gap-1.5 text-red-600 font-semibold bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl">
                   <AlertCircle className="w-4 h-4" />
-                  <span>{isVariantOutOfStock ? 'Esgotado nesta variação' : 'Produto esgotado no momento'}</span>
+                  <span>Fora de estoque</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 text-[#2A8882]">
                   <span className="w-2 h-2 rounded-full bg-[#2A8882]" />
-                  <span className="font-medium">Disponível em estoque ({effectiveStock} un.)</span>
+                  <span className="font-medium">Disponível</span>
                 </div>
               )}
             </div>
@@ -527,8 +546,8 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
                     {quantity}
                   </span>
                   <button
-                    onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))}
-                    disabled={isOutOfStock || quantity >= product.stockQuantity}
+                    onClick={() => setQuantity(Math.min(MAX_QUANTITY, quantity + 1))}
+                    disabled={isOutOfStock || quantity >= MAX_QUANTITY}
                     className="w-10 h-full text-[#524B42] hover:bg-[#F5EFE6] flex items-center justify-center font-bold text-base disabled:opacity-40"
                   >
                     +
@@ -550,12 +569,11 @@ export const ProductPage: React.FC<ProductPageProps> = ({ product }) => {
               {/* Botão Direto de Fechamento pelo WhatsApp */}
               <button
                 id="btn-buy-whatsapp-direct"
-                onClick={handleBuyNowWhatsApp}
-                disabled={isOutOfStock}
-                className="w-full bg-[#F4803E] hover:bg-[#DE6B22] text-white font-bold h-12 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={isOutOfStock ? handleNotifyMe : handleBuyNowWhatsApp}
+                className="w-full bg-[#F4803E] hover:bg-[#DE6B22] text-white font-bold h-12 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
               >
                 <MessageCircle className="w-5 h-5 fill-white text-white" />
-                <span>Comprar com Atendente no WhatsApp</span>
+                <span>{isOutOfStock ? 'Avise-me quando chegar' : 'Comprar pelo WhatsApp'}</span>
               </button>
             </div>
 
