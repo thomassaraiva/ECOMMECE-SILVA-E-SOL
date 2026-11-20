@@ -35,3 +35,20 @@ export function buildWhatsAppOrderUrl(
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`;
 }
+
+function waUrl(settings: StoreSettings, text: string): string {
+  return `https://wa.me/${settings.whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+}
+
+export function buildBackInStockUrl(
+  product: { name: string },
+  settings: StoreSettings,
+  { size, color }: { size?: string; color?: string }
+): string {
+  const parts = [color, size].filter(Boolean).join(', ');
+  return waUrl(settings, `Olá! Quero ser avisado quando a ${product.name}${parts ? ` (${parts})` : ''} voltar ao estoque.`);
+}
+
+export function buildProductDoubtUrl(product: { name: string }, settings: StoreSettings): string {
+  return waUrl(settings, `Olá! Tenho uma dúvida sobre a ${product.name}.`);
+}

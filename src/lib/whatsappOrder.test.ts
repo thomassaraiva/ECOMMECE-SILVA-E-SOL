@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildWhatsAppOrderUrl } from './whatsappOrder';
+import { buildWhatsAppOrderUrl, buildBackInStockUrl, buildProductDoubtUrl } from './whatsappOrder';
 
 const settings = { whatsappNumber: '+55 (81) 92001-9982' } as any;
 const cart = [
@@ -41,5 +41,37 @@ describe('buildWhatsAppOrderUrl', () => {
 
   it('carrinho vazio não gera link', () => {
     expect(buildWhatsAppOrderUrl([], settings)).toBe('');
+  });
+});
+
+const txt = (u: string) => decodeURIComponent(new URL(u).searchParams.get('text') || '');
+
+describe('uma peça só pelo WhatsApp', () => {
+  it('leva tamanho, cor, modelo, quantidade e preço promocional', () => {
+    const item = { id: 'x', productId: 'p1', name: 'Sunga Listrada', price: 120, promotionalPrice: 99, quantity: 3, selectedSize: 'M', selectedColor: 'Verde', selectedModel: 'Lisa', image: '', maxStock: 10 } as any;
+    const t = txt(buildWhatsAppOrderUrl([item], settings, { orderNumber: 'X' }));
+    expect(t).toContain('Tamanho: M | Cor: Verde | Modelo: Lisa');
+    expect(t).toContain('3 un. x R$ 99,00 = R$ 297,00');
+  });
+});
+
+describe('buildBackInStockUrl', () => {
+  const p = { name: 'Sunga Listrada' } as any;
+  it('com cor e tamanho', () => {
+    const u = buildBackInStockUrl(p, settings, { size: 'M', color: 'Verde' });
+    expect(u.startsWith('https://wa.me/5581920019982?text=')).toBe(true);
+    expect(txt(u)).toBe('Olá! Quero ser avisado quando a Sunga Listrada (Verde, M) voltar ao estoque.');
+  });
+  it('só tamanho', () => {
+    expect(txt(buildBackInStockUrl(p, settings, { size: 'M' }))).toBe('Olá! Quero ser avisado quando a Sunga Listrada (M) voltar ao estoque.');
+  });
+  it('só o nome', () => {
+    expect(txt(buildBackInStockUrl(p, settings, {}))).toBe('Olá! Quero ser avisado quando a Sunga Listrada voltar ao estoque.');
+  });
+});
+
+describe('buildProductDoubtUrl', () => {
+  it('pergunta sobre a peça', () => {
+    expect(txt(buildProductDoubtUrl({ name: 'Sunga Listrada' } as any, settings))).toBe('Olá! Tenho uma dúvida sobre a Sunga Listrada.');
   });
 });
